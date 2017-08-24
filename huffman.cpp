@@ -6,6 +6,7 @@
 #include <vector>
 #include <queue>
 #include <memory>
+#include <functional>
 
 namespace // Implementation details
 {
@@ -215,7 +216,7 @@ namespace // Implementation details
         write_block(buffer_length / CHAR_DIGITS + ((buffer_length % CHAR_DIGITS) > 0)); // TODO consider parenthesis
     }
 
-    void process_file(auto func, std::ios_base::seekdir it = is.beg)
+    void process_file(std::function<void(char)> func, std::ios_base::seekdir it = is.beg)
     {
         is.seekg(0, it);
         auto pos = is.tellg();
