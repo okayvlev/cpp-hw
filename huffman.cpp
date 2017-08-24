@@ -224,8 +224,6 @@ namespace // Implementation details
         is.seekg(pos);
         remainder -= is.tellg();
 
-        std::cout << remainder << std::endl;
-
         while (remainder > BUFFER_SIZE)
         {
             read_block();
