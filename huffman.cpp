@@ -66,12 +66,11 @@ namespace // Implementation details
     std::ifstream is { };
     std::ofstream os { };
     char read_buffer[BUFFER_SIZE];
-    char write_buffer[BUFFER_SIZE];  // We don't want to zero the buffers as its size can be too large
-    code code_table_[CHAR_RANGE];   // We don't need to default initialize it before every usage
-                                    // as all necessary elements will be reset with new values
-                                    // at every initialization
+    char write_buffer[BUFFER_SIZE];  // We don't want to zero the buffers as their size can be too large
+    code code_table_[CHAR_RANGE];    // We don't need to default initialize it before every usage
+                                     // as all necessary elements will be reset with new values at every initialization
     code* code_table { code_table_ - CHAR_MIN };
-    ull char_count_[CHAR_RANGE];    // We NEED to zero this array at every initialization
+    ull char_count_[CHAR_RANGE];     // We NEED to zero this array at every initialization
     ull* char_count { char_count_ - CHAR_MIN };
     code seq { };
     unsigned buffer_length { };
@@ -112,7 +111,6 @@ namespace // Implementation details
             ull count { char_count[c] };
             if (count > 0ull) q.push(std::make_pair(count, ptr { new node { static_cast<char>(c) } }));
         }
-
         while (q.size() > 1)
         {
             puu u { q.top() };
@@ -121,7 +119,6 @@ namespace // Implementation details
             q.pop();
             q.push(std::make_pair(u.first + v.first, ptr { new node { u.second, v.second, std::min(u.second->c, v.second->c) } } ));
         }
-
         traverse(q.top().second);
     }
 
@@ -135,30 +132,17 @@ namespace // Implementation details
         unsigned unique_chars { };
         for (int c = CHAR_MIN; c <= CHAR_MAX; ++c) { if (char_count[c] > 0) ++unique_chars; }
         os.write(reinterpret_cast<char*>(&unique_chars), sizeof(unsigned)); // TODO consider smaller type
-        long long sz = 0;
 
         for (int i = CHAR_MIN; i <= CHAR_MAX; ++i)
         {
             if (char_count[i] > 0ull)
             {
-                /*
-                std::cout << i << std::endl;
-
-                std::cout << code_table[i].size << " : ";
-                if (code_table[i].digits.size() > 0)
-                for (int j = 7; j >= 0; --j) {
-                    std::cout << bool(code_table[i].digits[0] & (1 << j));
-                }
-                std::cout << "\n";
-*/
-                sz += (long long)(char_count[i]) * (long long)(code_table[i].size);
                 char c { static_cast<char>(i) }; // TODO static_cast
                 os.write(&c, sizeof(char));
-                os.write(reinterpret_cast<char*>(&code_table[static_cast<int>(c)].size), sizeof(unsigned));
-                for (auto& c : code_table[static_cast<int>(c)].digits) { os.write(&c, sizeof(char)); }
+                os.write(reinterpret_cast<char*>(&code_table[i].size), sizeof(unsigned));
+                for (auto& c : code_table[i].digits) { os.write(&c, sizeof(char)); }
             }
         }
-        std::cout << sz << "\n";
     }
 
     void read_header()
@@ -179,12 +163,9 @@ namespace // Implementation details
                 is.read(&c, sizeof(char));
                 digits.push_back(c);
             }
-
             code_table[static_cast<int>(c)] = { size, digits };
         }
     }
-
-    long long sz = 0;
 
     void write_block(int size = BUFFER_SIZE)
     {
@@ -236,9 +217,11 @@ namespace // Implementation details
 
     void process_file(auto func, std::ios_base::seekdir it = is.beg)
     {
+        is.seekg(0, it);
+        auto pos = is.tellg();
         is.seekg(0, is.end);
         long long remainder { is.tellg() };
-        is.seekg(0, it);
+        is.seekg(pos);
         remainder -= is.tellg();
 
         std::cout << remainder << std::endl;
@@ -268,7 +251,6 @@ void compress(const char* src, const char* dst)
     write_header();
     process_file([](char c) { write_to_buffer(code_table[static_cast<int>(c)]); });
     flush_buffer();
-    std::cout << sz << std::endl;
 }
 
 void decompress(const char* src, const char* dst)
@@ -276,7 +258,7 @@ void decompress(const char* src, const char* dst)
     init_streams(src, dst);
     read_header();
     process_file([](char c) {}, is.cur);
-    
+
 /*
     while (!is.eof()) {
         check_ifstream(is);
