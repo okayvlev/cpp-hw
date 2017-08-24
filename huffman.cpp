@@ -75,6 +75,7 @@ namespace // Implementation details
     ull* char_count { char_count_ - CHAR_MIN };
     code seq { };
     unsigned buffer_length { };
+    unsigned buffer_counter { };
 
     void init_streams(const char* src, const char* dst)
     {
@@ -83,6 +84,12 @@ namespace // Implementation details
 
         if (!is.is_open()) throw std::runtime_error { "Couldn't open the source file" };
         if (!os.is_open()) throw std::runtime_error { "Couldn't open the destination file" };
+    }
+    
+    void init_buffers()
+    {
+        std::fill(char_count_, char_count_ + CHAR_RANGE, 0);
+        buffer_length = 0;
     }
 
     void traverse(ptr cur)
@@ -211,9 +218,24 @@ namespace // Implementation details
         check_buffer();
     }
 
+    void write_char_to_buffer(char c)   // Don't use it with write_to_buffer
+    {
+        write_buffer[buffer_counter] = c;
+        if (++buffer_counter == BUFFER_SIZE)
+        {
+            buffer_counter = 0;
+            write_block();
+        }
+    }
+
     void flush_buffer()
     {
         write_block(buffer_length / CHAR_DIGITS + ((buffer_length % CHAR_DIGITS) > 0)); // TODO consider parenthesis
+    }
+
+    void flush_buffer_to_counter()
+    {
+        write_block(buffer_counter);
     }
 
     void process_file(std::function<void(char)> func, std::ios_base::seekdir it = is.beg)
@@ -241,12 +263,10 @@ namespace // Implementation details
 
 void compress(const char* src, const char* dst)
 {
-    std::fill(char_count_, char_count_ + CHAR_RANGE, 0);
     init_streams(src, dst);
-    memset(char_count_, 0, sizeof(ull) * CHAR_RANGE);
+    init_buffers();
     process_file([](char c) { char_count[static_cast<int>(c)]++; });
     encode(char_count);
-    buffer_length = 0;
     write_header();
     process_file([](char c) { write_to_buffer(code_table[static_cast<int>(c)]); });
     flush_buffer();
@@ -256,32 +276,7 @@ void decompress(const char* src, const char* dst)
 {
     init_streams(src, dst);
     read_header();
+    build_automata();
     process_file([](char c) {}, is.cur);
-
-/*
-    while (!is.eof()) {
-        check_ifstream(is);
-        int len;
-        is.read(reinterpret_cast<char*>(&len), sizeof(int));
-        if (is.eof()) {
-            break;
-        }
-        memset(buf, 0, ext_buf_size);
-        is.read(buf, min(len / 8 + 1, ext_buf_size));
-        memset(ext_buf, 0, ext_buf_size);
-        int v = 0;
-        int k = 0;
-        for (int i = 0; i < len; ++i) {
-            int to = 0;
-            if ((buf[i / 8] & (1 << (i % 8))) > 0) to = 1;
-            v = trie[v].to[to];
-            if (trie[v].leaf) {
-                ext_buf[k++] = trie[v].c;
-                v = 0;
-            }
-        }
-        check_ofstream(os);
-        os.write(ext_buf, k);
-    }
-    */
+    flush_buffer_to_counter();
 }
