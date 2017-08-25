@@ -63,6 +63,17 @@ namespace // Implementation details
             else digits.back() &= (CHAR_RANGE - 1) ^ (1 << (CHAR_DIGITS - 1 - (size) % CHAR_DIGITS));
         }
     };
+    struct anode    // Automata node
+    {
+    private:
+        size_t links_[CHAR_RANGE] { };
+        std::vector<char> chars_[CHAR_RANGE] { };
+    public:
+        size_t small_links[2] { };
+        size_t* links { links_ - CHAR_MIN };
+        std::vector<char>* chars { chars_ - CHAR_MIN };
+        char leaf { };
+    };
 
     std::ifstream is { };
     std::ofstream os { };
@@ -76,6 +87,35 @@ namespace // Implementation details
     code seq { };
     unsigned buffer_length { };
     unsigned buffer_counter { };
+    class
+    {
+        size_t cur;
+        std::vector<anode> v { { } };    // Root is 0
+
+        friend void build_automata();
+
+    public:
+        void add(const code& c, char ch)
+        {
+            cur = 0;
+            for (unsigned i = 0; i < c.size; ++i)
+            {
+                size_t bit { (c.digits[i / CHAR_DIGITS] & (1 << (i % CHAR_DIGITS))) != 0 };
+                if (v[cur].small_links[bit] == 0)   // Root is absent
+                {
+                    v[cur].small_links[bit] = v.size();
+                    v.push_back({ });
+                }
+                cur = v[cur].small_links[bit];
+            }
+            v[cur].leaf = ch;
+        }
+
+        std::vector<char>& go(int c)    // sic!
+        {
+            return v[cur = v[cur].links[c]].chars[c];
+        }
+    } ca;  // Code automata
 
     void init_streams(const char* src, const char* dst)
     {
@@ -85,49 +125,11 @@ namespace // Implementation details
         if (!is.is_open()) throw std::runtime_error { "Couldn't open the source file" };
         if (!os.is_open()) throw std::runtime_error { "Couldn't open the destination file" };
     }
-    
+
     void init_buffers()
     {
         std::fill(char_count_, char_count_ + CHAR_RANGE, 0);
         buffer_length = 0;
-    }
-
-    void traverse(ptr cur)
-    {
-        if (!cur->left && !cur->right)
-        {
-            if (seq.size == 0) seq.append(0);
-            code_table[static_cast<int>(cur->c)] = seq;
-        }
-        else
-        {
-            seq.append(0);
-            traverse(cur->left);
-            seq.pop();
-            seq.append(1);
-            traverse(cur->right);
-            seq.pop();
-        }
-    }
-
-    void encode(ull* char_count)
-    {
-        std::priority_queue<puu, std::vector<puu>, std::greater<puu>> q;
-
-        for (int c = CHAR_MIN; c <= CHAR_MAX; ++c)
-        {
-            ull count { char_count[c] };
-            if (count > 0ull) q.push(std::make_pair(count, ptr { new node { static_cast<char>(c) } }));
-        }
-        while (q.size() > 1)
-        {
-            puu u { q.top() };
-            q.pop();
-            puu v { q.top() };
-            q.pop();
-            q.push(std::make_pair(u.first + v.first, ptr { new node { u.second, v.second, std::min(u.second->c, v.second->c) } } ));
-        }
-        traverse(q.top().second);
     }
 
     void read_block(int size = BUFFER_SIZE)
@@ -172,6 +174,7 @@ namespace // Implementation details
                 digits.push_back(c);
             }
             code_table[static_cast<int>(c)] = { size, digits };
+            ca.add(code_table[static_cast<int>(c)], c);
         }
     }
 
@@ -259,6 +262,65 @@ namespace // Implementation details
         for (int i = 0; i < remainder; ++i) { func(read_buffer[i]); }
         is.clear();
     }
+
+    void traverse(ptr cur)
+    {
+        if (!cur->left && !cur->right)
+        {
+            if (seq.size == 0) seq.append(0);
+            code_table[static_cast<int>(cur->c)] = seq;
+        }
+        else
+        {
+            seq.append(0);
+            traverse(cur->left);
+            seq.pop();
+            seq.append(1);
+            traverse(cur->right);
+            seq.pop();
+        }
+    }
+
+    void encode(ull* char_count)
+    {
+        std::priority_queue<puu, std::vector<puu>, std::greater<puu>> q;
+
+        for (int c = CHAR_MIN; c <= CHAR_MAX; ++c)
+        {
+            ull count { char_count[c] };
+            if (count > 0ull) q.push(std::make_pair(count, ptr { new node { static_cast<char>(c) } }));
+        }
+        while (q.size() > 1)
+        {
+            puu u { q.top() };
+            q.pop();
+            puu v { q.top() };
+            q.pop();
+            q.push(std::make_pair(u.first + v.first, ptr { new node { u.second, v.second, std::min(u.second->c, v.second->c) } } ));
+        }
+        traverse(q.top().second);
+    }
+
+    void build_automata()
+    {
+        for (size_t i = 0; i < ca.v.size(); ++i)
+        {
+            for (int c = CHAR_MIN; c <= CHAR_MAX; ++c)
+            {
+                ca.cur = i;
+                for (unsigned j = 0; j < CHAR_DIGITS; ++j)
+                {
+                    size_t bit { (c & (1u << j)) != 0 };
+                    if (ca.v[ca.cur].small_links[bit] == 0) // Assuming there are no new codes in the file
+                    {
+                        ca.v[i].chars[c].push_back(ca.v[ca.cur].leaf);
+                    }
+                    ca.cur = ca.v[ca.cur].small_links[bit];
+                }
+                ca.v[i].links[c] = ca.cur;
+            }
+        }
+    }
 }
 
 void compress(const char* src, const char* dst)
@@ -277,6 +339,6 @@ void decompress(const char* src, const char* dst)
     init_streams(src, dst);
     read_header();
     build_automata();
-    process_file([](char c) {}, is.cur);
+    process_file([](char c) { for (char& ch : ca.go(c)) { write_char_to_buffer(ch); } }, is.cur);
     flush_buffer_to_counter();
 }
