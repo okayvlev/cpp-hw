@@ -65,7 +65,7 @@ namespace // Implementation details
     };
     struct anode    // Automata node
     {
-    private:
+    private: // TODO
         size_t links_[CHAR_RANGE] { };
         std::vector<char> chars_[CHAR_RANGE] { };
     public:
@@ -73,6 +73,13 @@ namespace // Implementation details
         size_t* links { links_ - CHAR_MIN };
         std::vector<char>* chars { chars_ - CHAR_MIN };
         char leaf { };
+
+        anode()
+        {
+            std::cout << &chars[CHAR_MIN] << " " << chars_ << std::endl;
+        }
+
+        friend void build_automata(); // TODO temporary
     };
 
     std::ifstream is { };
@@ -313,6 +320,7 @@ namespace // Implementation details
                     size_t bit { (c & (1u << j)) != 0 };
                     if (ca.v[ca.cur].small_links[bit] == 0) // Assuming there are no new codes in the file
                     {
+                        //std::cout << c << " " << ca.v[i].chars_ << ":" << &(ca.v[i].chars[CHAR_MIN]) << " " << ca.v[i].chars[c].size() << "\n";
                         ca.v[i].chars[c].push_back(ca.v[ca.cur].leaf);
                     }
                     ca.cur = ca.v[ca.cur].small_links[bit];
@@ -339,6 +347,6 @@ void decompress(const char* src, const char* dst)
     init_streams(src, dst);
     read_header();
     build_automata();
-    process_file([](char c) { for (char& ch : ca.go(c)) { write_char_to_buffer(ch); } }, is.cur);
-    flush_buffer_to_counter();
+    //process_file([](char c) { for (char& ch : ca.go(c)) { write_char_to_buffer(ch); } }, is.cur);
+    //flush_buffer_to_counter();
 }
