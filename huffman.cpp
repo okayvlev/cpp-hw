@@ -14,7 +14,7 @@ namespace // Implementation details
     constexpr int CHAR_MAX { std::numeric_limits<char>::max() };
     constexpr unsigned CHAR_RANGE { CHAR_MAX - CHAR_MIN + 1 };
     constexpr unsigned CHAR_DIGITS { 8 }; // FIXME /* { std::numeric_limits<char>::digits }; */
-    constexpr unsigned BUFFER_SIZE { 64 * 1024 * 1024 }; // TODO DEBUG
+    constexpr unsigned BUFFER_SIZE { 64 * 1024 * 1024 };
     constexpr unsigned MAX_BUFFER_LENGTH { CHAR_DIGITS * BUFFER_SIZE };
 
     typedef unsigned long long ull;
@@ -64,19 +64,19 @@ namespace // Implementation details
         }
     };
     struct anode    // Automata node
-    {
-    private: // TODO
-        size_t links_[CHAR_RANGE] { };
-        std::vector<char> chars_[CHAR_RANGE] { };
+    {               // IDEA allocate on heap to fit a huge automata
+    private: // NOTE compiler bug???
+        //size_t links_[CHAR_RANGE] { };
+        //std::vector<char> chars_[CHAR_RANGE] { };
     public:
         size_t small_links[2] { };
-        size_t* links { links_ - CHAR_MIN };
-        std::vector<char>* chars { chars_ - CHAR_MIN };
+        //size_t* links { links_ - CHAR_MIN };
+        //std::vector<char>* chars { chars_ - CHAR_MIN };
         char leaf { };
 
         anode()
         {
-            std::cout << &chars[CHAR_MIN] << " " << chars_ << std::endl;
+            //std::cout << &chars[CHAR_MIN] << " " << chars_ << std::endl;
         }
 
         friend void build_automata(); // TODO temporary
@@ -94,21 +94,18 @@ namespace // Implementation details
     code seq { };
     unsigned buffer_length { };
     unsigned buffer_counter { };
-    class
+    struct
     {
         size_t cur;
         std::vector<anode> v { { } };    // Root is 0
 
-        friend void build_automata();
-
-    public:
         void add(const code& c, char ch)
         {
             cur = 0;
             for (unsigned i = 0; i < c.size; ++i)
             {
-                size_t bit { (c.digits[i / CHAR_DIGITS] & (1 << (i % CHAR_DIGITS))) != 0 };
-                if (v[cur].small_links[bit] == 0)   // Root is absent
+                size_t bit { (c.digits[i / CHAR_DIGITS] & (1 << (CHAR_DIGITS - i % CHAR_DIGITS - 1))) != 0 };
+                if (v[cur].small_links[bit] == 0)   // Node is absent
                 {
                     v[cur].small_links[bit] = v.size();
                     v.push_back({ });
@@ -117,11 +114,12 @@ namespace // Implementation details
             }
             v[cur].leaf = ch;
         }
-
+/*
         std::vector<char>& go(int c)    // sic!
         {
             return v[cur = v[cur].links[c]].chars[c];
         }
+        */
     } ca;  // Code automata
 
     void init_streams(const char* src, const char* dst)
@@ -182,6 +180,12 @@ namespace // Implementation details
             }
             code_table[static_cast<int>(c)] = { size, digits };
             ca.add(code_table[static_cast<int>(c)], c);
+
+            std::cout << (int)c << " " << size << " ";
+            for (int k = 7; k >= 0; --k) {
+                std::cout << bool((1 << k) & (code_table[static_cast<int>(c)].digits[0]));
+            }
+            std::cout << "\n";
         }
     }
 
@@ -308,7 +312,7 @@ namespace // Implementation details
         traverse(q.top().second);
     }
 
-    void build_automata()
+/*    void build_automata()   // TODO automata for fast char decoding
     {
         for (size_t i = 0; i < ca.v.size(); ++i)
         {
@@ -320,7 +324,7 @@ namespace // Implementation details
                     size_t bit { (c & (1u << j)) != 0 };
                     if (ca.v[ca.cur].small_links[bit] == 0) // Assuming there are no new codes in the file
                     {
-                        //std::cout << c << " " << ca.v[i].chars_ << ":" << &(ca.v[i].chars[CHAR_MIN]) << " " << ca.v[i].chars[c].size() << "\n";
+                        std::cout << c << " " << ca.v[i].chars_ << ":" << &(ca.v[i].chars[CHAR_MIN]) << " " << ca.v[i].chars[c].size() << "\n";
                         ca.v[i].chars[c].push_back(ca.v[ca.cur].leaf);
                     }
                     ca.cur = ca.v[ca.cur].small_links[bit];
@@ -329,6 +333,7 @@ namespace // Implementation details
             }
         }
     }
+*/
 }
 
 void compress(const char* src, const char* dst)
@@ -346,7 +351,22 @@ void decompress(const char* src, const char* dst)
 {
     init_streams(src, dst);
     read_header();
-    build_automata();
-    //process_file([](char c) { for (char& ch : ca.go(c)) { write_char_to_buffer(ch); } }, is.cur);
-    //flush_buffer_to_counter();
+    //build_automata();
+    ca.cur = 0;
+    process_file([](char c)
+    {
+        //for (char& ch : ca.go(c)) { write_char_to_buffer(ch); }       //TODO use automata
+        for (int k = 7; k >= 0; --k) {
+            unsigned bit { ((1 << k) & c) > 0 };
+            std::cout << bit;
+            ca.cur = ca.v[ca.cur].small_links[bit];
+            if (ca.v[ca.cur].small_links[0] == 0 && ca.v[ca.cur].small_links[1] == 0)   // is leaf
+            {
+                write_char_to_buffer(ca.v[ca.cur].leaf);
+                ca.cur = 0;
+            }
+        }
+    }, is.cur);
+    flush_buffer_to_counter();
+    std::cout << std::endl;
 }
