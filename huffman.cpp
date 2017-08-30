@@ -52,14 +52,14 @@ namespace // Implementation details
         void append(char bit)
         {
             ++size;
-            if (size / CHAR_DIGITS == digits.size()) digits.push_back(0);
+            if (digits.size() * CHAR_DIGITS < size) digits.push_back(0);
             if (bit) digits.back() ^= 1 << (CHAR_DIGITS - 1 - (size - 1) % CHAR_DIGITS);
         }
 
         void pop()
         {
             --size;
-            if (size / CHAR_DIGITS < digits.size() - 1) digits.pop_back();
+            if ((digits.size() - 1) * CHAR_DIGITS >= size) digits.pop_back();
             else digits.back() &= (CHAR_RANGE - 1) ^ (1 << (CHAR_DIGITS - 1 - (size) % CHAR_DIGITS));
         }
     };
@@ -173,6 +173,8 @@ namespace // Implementation details
             is.read(&c, sizeof(char));
             is.read(reinterpret_cast<char*>(&size), sizeof(unsigned));
             unsigned len = size / CHAR_DIGITS + (size % CHAR_DIGITS > 0);
+
+//            std::cout << ":" << len << ":";
             for (unsigned j = 0; j < len; ++j) {
                 char c;
                 is.read(&c, sizeof(char));
@@ -185,8 +187,12 @@ namespace // Implementation details
             for (int k = 7; k >= 0; --k) {
                 std::cout << bool((1 << k) & (code_table[static_cast<int>(c)].digits[0]));
             }
+            if (size == 9)
+            for (int k = 7; k >= 0; --k) {
+                std::cout << bool((1 << k) & (code_table[static_cast<int>(c)].digits[1]));
+            }
             std::cout << "\n";
-            */
+*/
         }
     }
 
@@ -222,25 +228,33 @@ namespace // Implementation details
     void write_to_buffer(const code& c)
     {
         /*
-        std::cout << c.size << ":";
-        for (int k = 7; k >= 0; --k) {
-            unsigned bit { ((1 << k) & c.digits[0]) > 0 };
-            std::cout << bit;
+        if (c.size == 9)
+        {
+            std::cout << c.size << ":";
+            for (int k = 7; k >= 0; --k) {
+                unsigned bit { ((1 << k) & c.digits[0]) > 0 };
+                std::cout << bit;
+            }
+            for (int k = 7; k >= 0; --k) {
+                unsigned bit { ((1 << k) & c.digits[1]) > 0 };
+                std::cout << bit;
+            }
+            std::cout << "\n";
         }
-        std::cout << "\n";
-*/
+        */
         const unsigned offset { static_cast<char>(buffer_length % CHAR_DIGITS) };
         const unsigned roffset { static_cast<char>(CHAR_DIGITS - offset) };
 
         for (unsigned i = 0; i < c.digits.size() - 1; ++i)
         {
-            write_buffer[buffer_length / CHAR_DIGITS] ^= c[i] >> offset;
+            write_buffer[buffer_length / CHAR_DIGITS] ^= static_cast<unsigned char>(c[i]) >> offset;
             buffer_length += roffset;
             check_buffer();
-            write_buffer[buffer_length / CHAR_DIGITS] ^= c[i] << roffset;
+            write_buffer[buffer_length / CHAR_DIGITS] ^= static_cast<unsigned char>(c[i]) << roffset;
             buffer_length += offset;
             check_buffer();
         }
+
         char left { static_cast<char>(c.size - (c.digits.size() - 1) * CHAR_DIGITS) };
         /*unsigned int kk = 0;
         std::cout << "xor:" << " " << (static_cast<unsigned char>(c.digits.back())) << " ";
@@ -250,25 +264,42 @@ namespace // Implementation details
         }
         std::cout << "\n";
         */
+        /*
+        for (int k = 7; k >= 0; --k) {
+            unsigned bit { ((1 << k) & ((static_cast<char>(c.digits.back())))) > 0 };
+            std::cout << bit;
+        }
+        std::cout << " ";
+        for (int k = 7; k >= 0; --k) {
+            unsigned bit { ((1 << k) & ((static_cast<unsigned char>(c.digits.back())))) > 0 };
+            std::cout << bit;
+        }
+        std::cout << "\n";
+        */
         write_buffer[buffer_length / CHAR_DIGITS] ^= static_cast<unsigned char>(c.digits.back()) >> offset;
         if (left <= roffset)
         {
             buffer_length += left;
             check_buffer();
-            buffer_out();
             return;
         }
         buffer_length += roffset;
         check_buffer();
-        write_buffer[buffer_length / CHAR_DIGITS] ^= c.digits.back() << roffset;
+        write_buffer[buffer_length / CHAR_DIGITS] ^= static_cast<unsigned char>(c.digits.back()) << roffset;
         buffer_length += left - roffset;
         check_buffer();
-
-        buffer_out();
     }
 
     void write_char_to_buffer(char c)   // Don't use it with write_to_buffer
     {
+        /*
+        std::cout << int(c) << " ";
+        for (int k = 7; k >= 0; --k) {  // TODO magic constant
+            unsigned bit { ((1 << k) & c) > 0 };
+            std::cout << bit;
+        }
+        std::cout << "\n";
+*/
         write_buffer[buffer_counter] = c;
         if (++buffer_counter == BUFFER_SIZE)
         {
@@ -378,7 +409,18 @@ void compress(const char* src, const char* dst)
     process_file([](char c) { char_count[static_cast<int>(c)]++; });
     encode(char_count);
     write_header();
-    process_file([](char c) { write_to_buffer(code_table[static_cast<int>(c)]); });
+    process_file([](char c)
+    {
+        /*
+        std::cout << int(c) << " ";
+        for (int k = 7; k >= 0; --k) {  // TODO magic constant
+            unsigned bit { ((1 << k) & c) > 0 };
+            std::cout << bit;
+        }
+        std::cout << "\n";
+        */
+        write_to_buffer(code_table[static_cast<int>(c)]);
+    });
     flush_buffer();
 }
 
@@ -391,7 +433,7 @@ void decompress(const char* src, const char* dst)
     process_file([](char c)
     {
         //for (char& ch : ca.go(c)) { write_char_to_buffer(ch); }       // TODO use automata
-        for (int k = 7; k >= 0; --k) {
+        for (int k = 7; k >= 0; --k) {  // TODO magic constant
             unsigned bit { ((1 << k) & c) > 0 };
             //std::cout << bit;
             ca.cur = ca.v[ca.cur].small_links[bit];
