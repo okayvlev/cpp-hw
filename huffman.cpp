@@ -180,12 +180,13 @@ namespace // Implementation details
             }
             code_table[static_cast<int>(c)] = { size, digits };
             ca.add(code_table[static_cast<int>(c)], c);
-
+/*
             std::cout << (int)c << " " << size << " ";
             for (int k = 7; k >= 0; --k) {
                 std::cout << bool((1 << k) & (code_table[static_cast<int>(c)].digits[0]));
             }
             std::cout << "\n";
+            */
         }
     }
 
@@ -203,10 +204,33 @@ namespace // Implementation details
         }
     }
 
+    void buffer_out()
+    {
+        std::cout << buffer_length << "\n";
+        for (int k = 7; k >= 0; --k) {
+            unsigned bit { ((1 << k) & write_buffer[0]) > 0 };
+            std::cout << bit;
+        }
+        for (int k = 7; k >= 0; --k) {
+            unsigned bit { ((1 << k) & write_buffer[1]) > 0 };
+            std::cout << bit;
+        }
+        std::cout << "\n";
+
+    }
+
     void write_to_buffer(const code& c)
     {
-        const char offset { static_cast<char>(buffer_length % CHAR_DIGITS) };
-        const char roffset { static_cast<char>(CHAR_DIGITS - offset) };
+        /*
+        std::cout << c.size << ":";
+        for (int k = 7; k >= 0; --k) {
+            unsigned bit { ((1 << k) & c.digits[0]) > 0 };
+            std::cout << bit;
+        }
+        std::cout << "\n";
+*/
+        const unsigned offset { static_cast<char>(buffer_length % CHAR_DIGITS) };
+        const unsigned roffset { static_cast<char>(CHAR_DIGITS - offset) };
 
         for (unsigned i = 0; i < c.digits.size() - 1; ++i)
         {
@@ -218,11 +242,20 @@ namespace // Implementation details
             check_buffer();
         }
         char left { static_cast<char>(c.size - (c.digits.size() - 1) * CHAR_DIGITS) };
-        write_buffer[buffer_length / CHAR_DIGITS] ^= c.digits.back() >> offset;
+        /*unsigned int kk = 0;
+        std::cout << "xor:" << " " << (static_cast<unsigned char>(c.digits.back())) << " ";
+        for (int k = 7; k >= 0; --k) {
+            unsigned bit { ((1 << k) & ((static_cast<unsigned char>(c.digits.back())) >> offset)) > 0 };
+            std::cout << bit;
+        }
+        std::cout << "\n";
+        */
+        write_buffer[buffer_length / CHAR_DIGITS] ^= static_cast<unsigned char>(c.digits.back()) >> offset;
         if (left <= roffset)
         {
             buffer_length += left;
             check_buffer();
+            buffer_out();
             return;
         }
         buffer_length += roffset;
@@ -230,6 +263,8 @@ namespace // Implementation details
         write_buffer[buffer_length / CHAR_DIGITS] ^= c.digits.back() << roffset;
         buffer_length += left - roffset;
         check_buffer();
+
+        buffer_out();
     }
 
     void write_char_to_buffer(char c)   // Don't use it with write_to_buffer
@@ -283,10 +318,10 @@ namespace // Implementation details
         }
         else
         {
-            seq.append(0);
+            seq.append(1);  // First 1 won't allow "0" code, which can appear at the end of the final char
             traverse(cur->left);
             seq.pop();
-            seq.append(1);
+            seq.append(0);
             traverse(cur->right);
             seq.pop();
         }
@@ -355,10 +390,10 @@ void decompress(const char* src, const char* dst)
     ca.cur = 0;
     process_file([](char c)
     {
-        //for (char& ch : ca.go(c)) { write_char_to_buffer(ch); }       //TODO use automata
+        //for (char& ch : ca.go(c)) { write_char_to_buffer(ch); }       // TODO use automata
         for (int k = 7; k >= 0; --k) {
             unsigned bit { ((1 << k) & c) > 0 };
-            std::cout << bit;
+            //std::cout << bit;
             ca.cur = ca.v[ca.cur].small_links[bit];
             if (ca.v[ca.cur].small_links[0] == 0 && ca.v[ca.cur].small_links[1] == 0)   // is leaf
             {
@@ -368,5 +403,5 @@ void decompress(const char* src, const char* dst)
         }
     }, is.cur);
     flush_buffer_to_counter();
-    std::cout << std::endl;
+    //std::cout << std::endl;
 }
