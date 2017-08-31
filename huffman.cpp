@@ -1,6 +1,7 @@
 #include "huffman.h"
 #include <fstream>
 #include <limits>
+#include <climits>
 #include <iostream>
 #include <cstring>
 #include <vector>
@@ -10,10 +11,8 @@
 
 namespace // Implementation details
 {
-    constexpr int CHAR_MIN { std::numeric_limits<char>::min() };
-    constexpr int CHAR_MAX { std::numeric_limits<char>::max() };
     constexpr unsigned CHAR_RANGE { CHAR_MAX - CHAR_MIN + 1 };
-    constexpr unsigned CHAR_DIGITS { 8 }; // FIXME /* { std::numeric_limits<char>::digits }; */
+    constexpr unsigned CHAR_DIGITS { CHAR_BIT * sizeof(char) };
     constexpr unsigned BUFFER_SIZE { 64 * 1024 * 1024 };
     constexpr unsigned MAX_BUFFER_LENGTH { CHAR_DIGITS * BUFFER_SIZE };
 
