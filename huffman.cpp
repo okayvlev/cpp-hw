@@ -14,7 +14,7 @@ namespace // Implementation details
     constexpr int CHAR_MAX { std::numeric_limits<char>::max() };
     constexpr unsigned CHAR_RANGE { CHAR_MAX - CHAR_MIN + 1 };
     constexpr unsigned CHAR_DIGITS { 8 }; // FIXME /* { std::numeric_limits<char>::digits }; */
-    constexpr unsigned BUFFER_SIZE { 2 };
+    constexpr unsigned BUFFER_SIZE { 64 * 1024 * 1024 };
     constexpr unsigned MAX_BUFFER_LENGTH { CHAR_DIGITS * BUFFER_SIZE };
 
     typedef unsigned long long ull;
@@ -35,7 +35,7 @@ namespace // Implementation details
     };
     struct code
     {
-        unsigned size;  // size in bits
+        unsigned size;  // Size in bits
         std::vector<char> digits;
 
         code()
@@ -64,22 +64,10 @@ namespace // Implementation details
         }
     };
     struct anode    // Automata node
-    {               // IDEA allocate on heap to fit a huge automata
-    private: // NOTE compiler bug???
-        //size_t links_[CHAR_RANGE] { };
-        //std::vector<char> chars_[CHAR_RANGE] { };
+    {               // IDEA build automata of CHAR_DIGITS-links; it can be huge, hence it needs to be allocated on heap
     public:
         size_t small_links[2] { };
-        //size_t* links { links_ - CHAR_MIN };
-        //std::vector<char>* chars { chars_ - CHAR_MIN };
         char leaf { };
-
-        anode()
-        {
-            //std::cout << &chars[CHAR_MIN] << " " << chars_ << std::endl;
-        }
-
-        friend void build_automata(); // TODO temporary
     };
 
     std::ifstream is { };
@@ -114,12 +102,6 @@ namespace // Implementation details
             }
             v[cur].leaf = ch;
         }
-/*
-        std::vector<char>& go(int c)    // sic!
-        {
-            return v[cur = v[cur].links[c]].chars[c];
-        }
-        */
     } ca;  // Code automata
 
     void init_streams(const char* src, const char* dst)
@@ -173,19 +155,12 @@ namespace // Implementation details
             is.read(&c, sizeof(char));
             is.read(reinterpret_cast<char*>(&size), sizeof(unsigned));
             unsigned len = size / CHAR_DIGITS + (size % CHAR_DIGITS > 0);
-            //std::cout << c << " " << size << " ";
+
             for (unsigned j = 0; j < len; ++j) {
                 char c;
                 is.read(&c, sizeof(char));
                 digits.push_back(c);
             }
-            /*
-            for (int k = CHAR_DIGITS - 1; k >= 0; --k) {
-                unsigned bit { ((1 << k) & digits[0]) > 0 };
-                std::cout << bit;
-            }
-            std::cout << std::endl;
-*/
             code_table[static_cast<int>(c)] = { size, digits };
             ca.add(code_table[static_cast<int>(c)], c);
         }
@@ -206,32 +181,8 @@ namespace // Implementation details
         }
     }
 
-    void buffer_out()
-    {
-        std::cout << buffer_length << " ";
-        for (int k = 7; k >= 0; --k) {
-            unsigned bit { ((1 << k) & write_buffer[0]) > 0 };
-            std::cout << bit;
-        }
-        for (int k = 7; k >= 0; --k) {
-            unsigned bit { ((1 << k) & write_buffer[1]) > 0 };
-            std::cout << bit;
-        }
-        std::cout << std::endl;
-    }
-
     void write_to_buffer(const code& c)
     {
-        /*
-            std::cout << c.size << ":";
-            for (int k = 7; k >= 0; --k) {
-                unsigned bit { ((1 << k) & c.digits[0]) > 0 };
-                std::cout << bit;
-            }
-            std::cout << "\n";
-
-        buffer_out();
-*/
         const unsigned offset { buffer_length % CHAR_DIGITS };
         const unsigned roffset { CHAR_DIGITS - offset };
 
@@ -244,7 +195,6 @@ namespace // Implementation details
             buffer_length += offset;
             check_buffer();
         }
-        //buffer_out();
         unsigned char left { static_cast<unsigned char>(c.size - (c.digits.size() - 1) * CHAR_DIGITS) };
 
         write_buffer[buffer_length / CHAR_DIGITS] ^= static_cast<unsigned char>(c.digits.back()) >> offset;
@@ -252,7 +202,6 @@ namespace // Implementation details
         {
             buffer_length += left;
             check_buffer();
-            //buffer_out();
             return;
         }
         buffer_length += roffset;
@@ -260,7 +209,6 @@ namespace // Implementation details
         write_buffer[buffer_length / CHAR_DIGITS] ^= static_cast<unsigned char>(c.digits.back()) << roffset;
         buffer_length += left - roffset;
         check_buffer();
-        //buffer_out();
     }
 
     void write_char_to_buffer(char c)   // Don't use it with write_to_buffer
@@ -342,29 +290,6 @@ namespace // Implementation details
         }
         traverse(q.top().second);
     }
-
-/*    void build_automata()   // TODO automata for fast char decoding
-    {
-        for (size_t i = 0; i < ca.v.size(); ++i)
-        {
-            for (int c = CHAR_MIN; c <= CHAR_MAX; ++c)
-            {
-                ca.cur = i;
-                for (unsigned j = 0; j < CHAR_DIGITS; ++j)
-                {
-                    size_t bit { (c & (1u << j)) != 0 };
-                    if (ca.v[ca.cur].small_links[bit] == 0) // Assuming there are no new codes in the file
-                    {
-                        std::cout << c << " " << ca.v[i].chars_ << ":" << &(ca.v[i].chars[CHAR_MIN]) << " " << ca.v[i].chars[c].size() << "\n";
-                        ca.v[i].chars[c].push_back(ca.v[ca.cur].leaf);
-                    }
-                    ca.cur = ca.v[ca.cur].small_links[bit];
-                }
-                ca.v[i].links[c] = ca.cur;
-            }
-        }
-    }
-*/
 }
 
 void compress(const char* src, const char* dst)
@@ -388,23 +313,18 @@ void decompress(const char* src, const char* dst)
 {
     init_streams(src, dst);
     read_header();
-    //build_automata();
     ca.cur = 0;
     process_file([](char c)
     {
-        //std::cout << int(c) << " ";
-        //for (char& ch : ca.go(c)) { write_char_to_buffer(ch); }       // TODO use automata
         for (int k = CHAR_DIGITS - 1; k >= 0; --k) {
             unsigned bit { ((1 << k) & c) > 0 };
-            //std::cout << bit;
             ca.cur = ca.v[ca.cur].small_links[bit];
-            if (ca.v[ca.cur].small_links[0] == 0 && ca.v[ca.cur].small_links[1] == 0)   // is leaf
+            if (ca.v[ca.cur].small_links[0] == 0 && ca.v[ca.cur].small_links[1] == 0)   // Is leaf
             {
                 write_char_to_buffer(ca.v[ca.cur].leaf);
                 ca.cur = 0;
             }
         }
-        //std::cout << std::endl;
     }, is.cur);
     flush_buffer_to_counter();
 }
