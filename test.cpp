@@ -12,8 +12,7 @@ int main(int argc, const char* argv[])
     using namespace std::chrono;
     auto t0 { high_resolution_clock::now() };
 
-    if (argc <= 2 ||
-        (strcmp(argv[1], "compress") != 0 && strcmp(argv[1], "decompress") != 0))
+    if (argc <= 2 || (strcmp(argv[1], "compress") != 0 && strcmp(argv[1], "decompress") != 0))
     {
 #if COLOR_SUPPORT == 1
         printf("\033[1;33mUsage\033[0m: %s [compress|decompress] [source] [destination=%s]\n", argv[0], DEFAULT_FILE);

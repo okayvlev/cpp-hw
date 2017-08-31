@@ -81,6 +81,8 @@ namespace // Implementation details
     code seq { };
     unsigned buffer_length { };
     unsigned buffer_counter { };
+    ull file_size { };
+    ull written_bytes { };
     struct
     {
         size_t cur;
@@ -116,6 +118,7 @@ namespace // Implementation details
     {
         std::fill(char_count_, char_count_ + CHAR_RANGE, 0);
         buffer_length = 0;
+        file_size = 0;
     }
 
     void read_block(int size = BUFFER_SIZE)
@@ -127,7 +130,8 @@ namespace // Implementation details
     {
         unsigned unique_chars { };
         for (int c = CHAR_MIN; c <= CHAR_MAX; ++c) { if (char_count[c] > 0) ++unique_chars; }
-        os.write(reinterpret_cast<char*>(&unique_chars), sizeof(unsigned)); // TODO consider smaller type
+        os.write(reinterpret_cast<char*>(&unique_chars), sizeof(unsigned));
+        os.write(reinterpret_cast<char*>(&file_size), sizeof(ull));
 
         for (int i = CHAR_MIN; i <= CHAR_MAX; ++i)
         {
@@ -146,6 +150,7 @@ namespace // Implementation details
         unsigned unique_chars { };
 
         is.read(reinterpret_cast<char*>(&unique_chars), sizeof(unsigned));
+        is.read(reinterpret_cast<char*>(&file_size), sizeof(ull));
         for (unsigned i = 0; i < unique_chars; ++i) {
             char c;
             unsigned size;
@@ -222,7 +227,7 @@ namespace // Implementation details
 
     void flush_buffer()
     {
-        write_block(buffer_length / CHAR_DIGITS + ((buffer_length % CHAR_DIGITS) > 0)); // TODO consider parenthesis
+        write_block(buffer_length / CHAR_DIGITS + ((buffer_length % CHAR_DIGITS) > 0));
     }
 
     void flush_buffer_to_counter()
@@ -261,10 +266,10 @@ namespace // Implementation details
         }
         else
         {
-            seq.append(1);  // First 1 won't allow "0" code, which can appear at the end of the final char
+            seq.append(0);
             traverse(cur->left);
             seq.pop();
-            seq.append(0);
+            seq.append(1);
             traverse(cur->right);
             seq.pop();
         }
@@ -297,7 +302,8 @@ void compress(const char* src, const char* dst)
     init_buffers();
     process_file([](char c)
     {
-        char_count[static_cast<int>(c)]++;
+        ++char_count[static_cast<int>(c)];
+        ++file_size;
     });
     encode(char_count);
     write_header();
@@ -313,6 +319,7 @@ void decompress(const char* src, const char* dst)
     init_streams(src, dst);
     read_header();
     ca.cur = 0;
+    written_bytes = 0;
     process_file([](char c)
     {
         for (int k = CHAR_DIGITS - 1; k >= 0; --k) {
@@ -320,6 +327,7 @@ void decompress(const char* src, const char* dst)
             ca.cur = ca.v[ca.cur].small_links[bit];
             if (ca.v[ca.cur].small_links[0] == 0 && ca.v[ca.cur].small_links[1] == 0)   // Is leaf
             {
+                if (file_size < ++written_bytes) return;    // Last bit may contain zeroes at the end, which can lead to appearance of extra bytes
                 write_char_to_buffer(ca.v[ca.cur].leaf);
                 ca.cur = 0;
             }
