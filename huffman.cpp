@@ -65,7 +65,6 @@ namespace // Implementation details
     };
     struct anode    // Automata node
     {               // IDEA build automata of CHAR_DIGITS-links; it can be huge, hence it needs to be allocated on heap
-    public:
         size_t small_links[2] { };
         char leaf { };
     };
