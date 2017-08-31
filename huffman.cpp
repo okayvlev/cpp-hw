@@ -234,6 +234,11 @@ namespace // Implementation details
         write_block(buffer_counter);
     }
 
+    bool is_file_empty()
+    {
+        return (is.peek() == std::ifstream::traits_type::eof());
+    }
+
     void process_file(std::function<void(char)> func, std::ios_base::seekdir it = is.beg)
     {
         is.seekg(0, it);
@@ -298,6 +303,7 @@ namespace // Implementation details
 void compress(const char* src, const char* dst)
 {
     init_streams(src, dst);
+    if (is_file_empty()) return;
     init_buffers();
     process_file([](char c)
     {
@@ -316,6 +322,7 @@ void compress(const char* src, const char* dst)
 void decompress(const char* src, const char* dst)
 {
     init_streams(src, dst);
+    if (is_file_empty()) return;
     read_header();
     ca.cur = 0;
     written_bytes = 0;
