@@ -3,6 +3,8 @@
 
 struct big_integer
 {
+    using value_type = uint32_t;
+
     big_integer();
     big_integer(big_integer const& other);
     big_integer(int a);
@@ -44,6 +46,16 @@ struct big_integer
     friend std::string to_string(big_integer const& a);
 
 private:
+    enum
+    {
+        SMALL,
+        NORMAL
+    } state;
+    union
+    {
+        value_type number;
+        value_type* array;
+    };
 };
 
 big_integer operator+(big_integer a, big_integer const& b);
