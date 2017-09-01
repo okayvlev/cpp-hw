@@ -4,17 +4,30 @@
 
 big_integer::big_integer() : big_integer { 0 } { }
 
-void big_integer::quick_copy(big_integer& other)
+void big_integer::quick_copy(const big_integer& other)
 {
-    state = BIG;
-    if (other.state == SMALL) other.to_big_object();
-    other.ref_count()++;
-    array = other.array;
+    if (other.state == SMALL)
+    {
+        state = SMALL;
+        number = other.number;
+    }
+    else
+    {
+        state = BIG;
+        array = other.array;
+        other.array[-2]++;  // accessing ref_count
+    }
 }
 
-big_integer::big_integer(big_integer& other)
+big_integer::big_integer(const big_integer& other)
 {
-    quick_copy(other);
+    try
+    {
+        big_integer tmp;
+        tmp.quick_copy(other);
+        swap(std::move(tmp));
+    }
+    catch (...) { /* reporting error */ };
 }
 
 big_integer::big_integer(int a)
@@ -38,9 +51,24 @@ big_integer::~big_integer()
     }
 }
 
-big_integer& big_integer::operator=(big_integer& other)
+void big_integer::swap(big_integer&& tmp)   // assuming tmp won't be used anymore
 {
-    quick_copy(other);
+    if (tmp.state == BIG)   // if something will happen here, nothing will be spoiled
+        std::swap(number, tmp.number);
+    else
+        std::swap(array, tmp.array);
+    std::swap(state, tmp.state);
+}
+
+big_integer& big_integer::operator=(const big_integer& other)
+{
+    try
+    {
+        big_integer tmp { other };
+        swap(std::move(tmp));
+    }
+    catch (...) { /* reporting error */ };
+
     return *this;
 }
 
@@ -108,9 +136,23 @@ void big_integer::to_big_object()
 
 void big_integer::detach()
 {
-    ref_count()--;
+    big_integer tmp;
     value_type* old { array };
-    array = new value_type[*(old - 1) + 2] + 2;
-    memcpy(array - 1, old - 1, *(old - 1) + 1);
-    ref_count() = 0;
+    tmp.array = new value_type[*(old - 1) + 2] + 2;
+    memcpy(tmp.array - 1, old - 1, *(old - 1) + 1);
+    tmp.ref_count() = 0;
+    swap(std::move(tmp));
+    --array[-2];    // if no exception
+}
+
+bool big_integer::convert_to_signed()
+{
+    bool sign { array[size() - 1] >> (BITS - 1) };
+    return sign;
+}
+
+void big_integer::convert_to_2s(bool sign)
+{
+    if (sign) return;
+    operator-();
 }
