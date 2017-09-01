@@ -6,12 +6,12 @@ struct big_integer
     using value_type = uint32_t;
 
     big_integer();
-    big_integer(big_integer const& other);
+    big_integer(big_integer& other);
     big_integer(int a);
     explicit big_integer(std::string const& str);
     ~big_integer();
 
-    big_integer& operator=(big_integer const& other);
+    big_integer& operator=(big_integer& other);
 
     big_integer& operator+=(big_integer const& rhs);
     big_integer& operator-=(big_integer const& rhs);
@@ -49,13 +49,21 @@ private:
     enum
     {
         SMALL,
-        NORMAL
+        BIG
     } state;
     union
     {
         value_type number;
         value_type* array;
     };
+
+    value_type& operator[](size_t n) { return array[n]; }
+    value_type& ref_count() { return array[-2]; }
+    value_type& size() { return array[-1]; }
+
+    void to_big_object();
+    void detach();
+    void quick_copy(big_integer& other);
 };
 
 big_integer operator+(big_integer a, big_integer const& b);
