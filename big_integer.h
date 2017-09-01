@@ -3,7 +3,7 @@
 
 struct big_integer
 {
-    using value_type = uint32_t;
+    using value_type = uint32_t;    // any unsigned type should fit
 
     big_integer();
     big_integer(const big_integer& other);

@@ -102,11 +102,12 @@ big_integer big_integer::operator-() const
 
 big_integer big_integer::operator~() const
 {
+    if (state == SMALL) return ~number;
     big_integer tmp { *this };
     tmp.detach();
     for (size_t i = 0; i < size(); ++i)
     {
-        tmp.array[i] = ~tmp.array[i];
+        tmp[i] = ~tmp[i];
     }
     tmp.trim();
     return tmp;
@@ -200,4 +201,19 @@ void big_integer::convert_to_2s(bool sign)
 {
     if (sign) return;
     *this = ++~*this;
+}
+
+void big_integer::trim()
+{
+    if (state == SMALL) return;
+    value_type zero { sign() ? ~0u : 0u };
+
+    while (size() > 1 && operator[](size() - 1) == zero)
+        --size();
+    if (sign() != (0u == zero)) ++size();
+    if (size() == 1)
+    {
+        state = SMALL;
+        number = operator[](0);
+    }
 }
