@@ -35,7 +35,12 @@ big_integer::big_integer(int a)
     state = SMALL;
     number = a;
 }
-// explicit big_integer(std::string const& str);
+/*
+explicit big_integer(std::string const& str)
+{
+
+}
+*/
 big_integer::~big_integer()
 {
     if (state == BIG)
@@ -84,17 +89,55 @@ big_integer& big_integer::operator=(const big_integer& other)
 //
 // big_integer& operator<<=(int rhs);
 // big_integer& operator>>=(int rhs);
-//
-// big_integer operator+() const;
-// big_integer operator-() const;
-// big_integer operator~() const;
-//
-// big_integer& operator++();
-// big_integer operator++(int);
-//
-// big_integer& operator--();
-// big_integer operator--(int);
-//
+
+big_integer big_integer::operator+() const
+{
+    return *this;
+}
+
+big_integer big_integer::operator-() const
+{
+    return ++~*this;
+}
+
+big_integer big_integer::operator~() const
+{
+    big_integer tmp { *this };
+    tmp.detach();
+    for (size_t i = 0; i < size(); ++i)
+    {
+        tmp.array[i] = ~tmp.array[i];
+    }
+    tmp.trim();
+    return tmp;
+}
+
+big_integer& big_integer::operator++()
+{
+    return *this += 1;
+}
+
+big_integer big_integer::operator++(int)
+{
+    big_integer tmp { *this };
+    tmp.detach();
+    ++*this;
+    return tmp;
+}
+
+big_integer& big_integer::operator--()
+{
+    return *this -= 1;
+}
+
+big_integer big_integer::operator--(int)
+{
+    big_integer tmp { *this };
+    tmp.detach();
+    --*this;
+    return tmp;
+}
+
 // bool operator==(big_integer const& a, big_integer const& b);
 // bool operator!=(big_integer const& a, big_integer const& b);
 // bool operator<(big_integer const& a, big_integer const& b);
@@ -136,6 +179,7 @@ void big_integer::to_big_object()
 
 void big_integer::detach()
 {
+    if (state == SMALL) return;
     big_integer tmp;
     value_type* old { array };
     tmp.array = new value_type[*(old - 1) + 2] + 2;
@@ -147,12 +191,13 @@ void big_integer::detach()
 
 bool big_integer::convert_to_signed()
 {
-    bool sign { array[size() - 1] >> (BITS - 1) };
-    return sign;
+    bool sign_ { sign() };
+    *this = ++~*this;
+    return sign_;
 }
 
 void big_integer::convert_to_2s(bool sign)
 {
     if (sign) return;
-    operator-();
+    *this = ++~*this;
 }

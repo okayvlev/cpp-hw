@@ -64,6 +64,7 @@ private:
     const value_type& operator[](size_t n) const { return array[n]; }
     const value_type& ref_count() const { return array[-2]; }
     const value_type& size() const { return array[-1]; }
+    bool sign() const { return array[size() - 1] >> (BITS - 1); }
 
     void to_big_object();
     void detach();
@@ -71,6 +72,7 @@ private:
     void quick_copy(const big_integer& other);
     bool convert_to_signed();
     void convert_to_2s(bool sign);
+    void trim();
 };
 
 big_integer operator+(big_integer a, big_integer const& b);
