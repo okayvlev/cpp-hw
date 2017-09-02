@@ -1,5 +1,6 @@
 #include <iostream>
 #include <cstring>
+#include <algorithm>
 #include "big_integer.h"
 
 big_integer::big_integer() : big_integer { 0 } { }
@@ -35,12 +36,28 @@ big_integer::big_integer(int a)
     state = SMALL;
     number = a;
 }
-/*
-explicit big_integer(std::string const& str)
-{
 
+big_integer::big_integer(std::string const& str)
+{
+    try
+    {
+        bool sign_ { str.size() > 0 && str[0] == '-' };
+        big_integer tmp { };
+
+        for (char c : str)
+        {
+            if (isdigit(c))
+            {
+                tmp *= 10;
+                tmp += c - '0';
+            }
+        }
+        if (sign_) tmp = -tmp;
+        swap(tmp);
+    }
+    catch (...) { /* reporting error */ };
 }
-*/
+
 big_integer::~big_integer()
 {
     if (state == BIG)
@@ -261,11 +278,118 @@ big_integer& big_integer::operator%=(big_integer const& rhs)
     return *this = *this - (*this / rhs) * rhs;
 }
 
-// big_integer& operator&=(big_integer const& rhs);
-// big_integer& operator|=(big_integer const& rhs);
-// big_integer& operator^=(big_integer const& rhs);
-//
-// big_integer& operator<<=(int rhs);
+big_integer& big_integer::operator&=(big_integer const& rhs)
+{
+    big_integer tmp { };
+
+    if (state == rhs.state && rhs.state == SMALL)
+    {
+        tmp.number = number & rhs.number;
+        swap(tmp);
+        return *this;
+    }
+    big_integer a { *this };
+    big_integer b { rhs };
+    a.detach();
+    b.detach();
+    if (a.state == SMALL)
+        a.to_big_object();
+    if (b.state == SMALL)
+        b.to_big_object();
+
+    tmp.to_big_object();
+    tmp.reallocate(std::max(a.size(), b.size()));
+
+    const value_type zero_a { a.sign() ? ~0u : 0u };
+    const value_type zero_b { b.sign() ? ~0u : 0u };
+
+    for (size_t i = 0; i < tmp.size(); ++i)
+    {
+        value_type x { i < a.size() ? a[i] : zero_a };
+        value_type y { i < b.size() ? b[i] : zero_b };
+        tmp[i] = x & y;
+    }
+
+    swap(tmp);
+    return *this;
+}
+
+big_integer& big_integer::operator|=(big_integer const& rhs)
+{
+    big_integer tmp { };
+
+    if (state == rhs.state && rhs.state == SMALL)
+    {
+        tmp.number = number | rhs.number;
+        swap(tmp);
+        return *this;
+    }
+    big_integer a { *this };
+    big_integer b { rhs };
+    a.detach();
+    b.detach();
+    if (a.state == SMALL)
+        a.to_big_object();
+    if (b.state == SMALL)
+        b.to_big_object();
+
+    tmp.to_big_object();
+    tmp.reallocate(std::max(a.size(), b.size()));
+
+    const value_type zero_a { a.sign() ? ~0u : 0u };
+    const value_type zero_b { b.sign() ? ~0u : 0u };
+
+    for (size_t i = 0; i < tmp.size(); ++i)
+    {
+        value_type x { i < a.size() ? a[i] : zero_a };
+        value_type y { i < b.size() ? b[i] : zero_b };
+        tmp[i] = x | y;
+    }
+
+    swap(tmp);
+    return *this;
+}
+
+big_integer& big_integer::operator^=(big_integer const& rhs)
+{
+    big_integer tmp { };
+
+    if (state == rhs.state && rhs.state == SMALL)
+    {
+        tmp.number = number ^ rhs.number;
+        swap(tmp);
+        return *this;
+    }
+    big_integer a { *this };
+    big_integer b { rhs };
+    a.detach();
+    b.detach();
+    if (a.state == SMALL)
+        a.to_big_object();
+    if (b.state == SMALL)
+        b.to_big_object();
+
+    tmp.to_big_object();
+    tmp.reallocate(std::max(a.size(), b.size()));
+
+    const value_type zero_a { a.sign() ? ~0u : 0u };
+    const value_type zero_b { b.sign() ? ~0u : 0u };
+
+    for (size_t i = 0; i < tmp.size(); ++i)
+    {
+        value_type x { i < a.size() ? a[i] : zero_a };
+        value_type y { i < b.size() ? b[i] : zero_b };
+        tmp[i] = x ^ y;
+    }
+
+    swap(tmp);
+    return *this;
+}
+
+big_integer& operator<<=(int rhs)
+{
+    
+}
 // big_integer& operator>>=(int rhs);
 
 big_integer big_integer::operator+() const
@@ -428,7 +552,25 @@ bool operator>=(big_integer const& a, big_integer const& b)
     return !(a < b);
 }
 
-// std::string to_string(big_integer const& a);
+std::string to_string(big_integer const& a)
+{
+    big_integer tmp { a };
+    std::string str { };
+    tmp.detach();
+    bool sign_ = tmp.convert_to_signed();
+
+    while (tmp > 0)
+    {
+        str += static_cast<char>('0' + (tmp % 10).number);
+        tmp /= 10;
+    }
+    if (sign_)
+        str += '-';
+    std::reverse(str.begin(), str.end());
+
+    return str;
+}
+
 std::ostream& operator<<(std::ostream& s, big_integer const& a)
 {
     return s << to_string(a);
