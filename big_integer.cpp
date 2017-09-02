@@ -53,6 +53,7 @@ big_integer::big_integer(std::string const& str)
             }
         }
         if (sign_) tmp = -tmp;
+        tmp.trim();
         swap(tmp);
     }
     catch (...) { /* reporting error */ };
@@ -309,7 +310,7 @@ big_integer& big_integer::operator&=(big_integer const& rhs)
         value_type y { i < b.size() ? b[i] : zero_b };
         tmp[i] = x & y;
     }
-
+    tmp.trim();
     swap(tmp);
     return *this;
 }
@@ -345,7 +346,7 @@ big_integer& big_integer::operator|=(big_integer const& rhs)
         value_type y { i < b.size() ? b[i] : zero_b };
         tmp[i] = x | y;
     }
-
+    tmp.trim();
     swap(tmp);
     return *this;
 }
@@ -381,16 +382,72 @@ big_integer& big_integer::operator^=(big_integer const& rhs)
         value_type y { i < b.size() ? b[i] : zero_b };
         tmp[i] = x ^ y;
     }
+    tmp.trim();
+    swap(tmp);
+    return *this;
+}
+// FIXME add trim everywhere
+big_integer& big_integer::operator<<=(int rhs)
+{
+    value_type d { 1 };
+    big_integer tmp { *this };
 
+    while (rhs % BITS != 0)
+    {
+        d *= 2;
+        --rhs;
+    }
+    tmp.detach();
+    if (tmp.state == SMALL)
+        tmp.to_big_object();
+    tmp *= d;
+
+    int h { rhs / BITS };
+
+    tmp.reallocate(tmp.size() + h);
+    for (int i = tmp.size() - 1; i >= h; --i)
+    {
+        tmp[i] = tmp[i - h];
+    }
+    for (int i = 0; i < h; ++i)
+        tmp[i] = 0u;
+    tmp.trim();
     swap(tmp);
     return *this;
 }
 
-big_integer& operator<<=(int rhs)
+big_integer& big_integer::operator>>=(int rhs)
 {
-    
+    value_type d { 1 };
+    big_integer tmp { *this };
+
+    while (rhs % BITS != 0)
+    {
+        d *= 2;
+        --rhs;
+    }
+    tmp.detach();
+    if (tmp.state == SMALL)
+        tmp.to_big_object();
+    tmp /= d;
+
+    int h { rhs / BITS };
+
+    if (h >= tmp.size())
+    {
+        big_integer tmp { };
+        swap(tmp);
+        return *this;
+    }
+    for (int i = 0; i < tmp.size() - h; ++i)
+    {
+        tmp[i] = tmp[i + h];
+    }
+    tmp.reallocate(tmp.size() - h);
+    tmp.trim();
+    swap(tmp);
+    return *this;
 }
-// big_integer& operator>>=(int rhs);
 
 big_integer big_integer::operator+() const
 {
@@ -578,6 +635,7 @@ std::ostream& operator<<(std::ostream& s, big_integer const& a)
 
 void big_integer::to_big_object()
 {
+    if (state == BIG) return;
     state = BIG;
     array = new value_type[3] + 2;  // shift for optimizing operator[] call
     size() = 1;
@@ -614,7 +672,7 @@ void big_integer::convert_to_2s(bool sign)
 
 void big_integer::reallocate(value_type new_size)
 {
-    if (state == SMALL) return;
+    if (state == SMALL || size() == new_size) return;
     detach();
     new_size += 2;
     value_type* new_arr = new value_type[new_size] { };
@@ -622,6 +680,7 @@ void big_integer::reallocate(value_type new_size)
     delete[](array - 2);
     array = new_arr + 2;
     size() = new_size;
+    trim();
 }
 
 void big_integer::trim()

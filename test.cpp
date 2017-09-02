@@ -5,6 +5,7 @@ using namespace std;
 
 int main()
 {
-    //if (NORMAL) cout << 1;
+    big_integer a { "1" };
+
     return 0;
 }
