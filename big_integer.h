@@ -4,6 +4,7 @@
 struct big_integer
 {
     using value_type = uint32_t;    // any unsigned type should fit
+    using tr_value_type = uint64_t; // any unsigned type twice as large as value_type
 
     big_integer();
     big_integer(const big_integer& other);
@@ -47,6 +48,7 @@ struct big_integer
 
 private:
     static constexpr int BITS { 32 }; // TODO
+    static constexpr value_type BASE { ~0u }; // TODO
     enum
     {
         SMALL,
@@ -73,6 +75,7 @@ private:
     bool convert_to_signed();
     void convert_to_2s(bool sign);
     void trim();
+    void reallocate(value_type new_size);
 };
 
 big_integer operator+(big_integer a, big_integer const& b);
