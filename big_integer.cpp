@@ -25,7 +25,7 @@ big_integer::big_integer(const big_integer& other)
     {
         big_integer tmp;
         tmp.quick_copy(other);
-        swap(std::move(tmp));
+        swap(tmp);
     }
     catch (...) { /* reporting error */ };
 }
@@ -56,7 +56,7 @@ big_integer::~big_integer()
     }
 }
 
-void big_integer::swap(big_integer&& tmp)   // assuming tmp won't be used anymore
+void big_integer::swap(big_integer& tmp)   // assuming tmp won't be used anymore
 {
     if (tmp.state == BIG)   // if something will happen here, nothing will be spoiled
         std::swap(number, tmp.number);
@@ -70,7 +70,7 @@ big_integer& big_integer::operator=(const big_integer& other)
     try
     {
         big_integer tmp { other };
-        swap(std::move(tmp));
+        swap(tmp);
     }
     catch (...) { /* reporting error */ };
 
@@ -79,11 +79,16 @@ big_integer& big_integer::operator=(const big_integer& other)
 
 big_integer& big_integer::operator+=(big_integer const& rhs)
 {
-    if (sign() != rhs.sign())
-        return *this -= -rhs;
-
     big_integer a { *this };
     big_integer b { rhs };
+
+    if (a.state == SMALL) to_big_object();
+    if (b.state == SMALL) to_big_object();
+    a.detach();
+    b.detach();
+    if (a.sign() != b.sign())
+        return a -= -b;
+
     bool sign_ { a.convert_to_signed() }; // equal signs
     b.convert_to_signed();
     a.reallocate(std::max(a.size(), b.size()) + 1);
@@ -99,17 +104,22 @@ big_integer& big_integer::operator+=(big_integer const& rhs)
     }
     a.convert_to_2s(sign_);
     a.trim();
-    swap(std::move(a));
+    swap(a);
     return *this;
 }
 
 big_integer& big_integer::operator-=(big_integer const& rhs)
 {
-    if (sign() != rhs.sign())
-        return *this += -rhs;
-
     big_integer a { *this };
     big_integer b { rhs };
+
+    if (a.state == SMALL) to_big_object();
+    if (b.state == SMALL) to_big_object();
+    a.detach();
+    b.detach();
+    if (a.sign() != b.sign())
+        return a += -b;
+
     bool sign_ { a.convert_to_signed() }; // equal signs
     b.convert_to_signed();
     a.reallocate(std::max(a.size(), b.size()));
@@ -128,11 +138,124 @@ big_integer& big_integer::operator-=(big_integer const& rhs)
     }
     a.convert_to_2s(sign_);
     a.trim();
-    swap(std::move(a));
+    swap(a);
     return *this;
 }
-// big_integer& operator*=(big_integer const& rhs);
-// big_integer& operator/=(big_integer const& rhs);
+
+big_integer& big_integer::operator*=(big_integer const& rhs)
+{
+    big_integer a { *this };
+    big_integer b { rhs };
+
+    if (a.state == SMALL) to_big_object();
+    if (b.state == SMALL) to_big_object();
+    a.detach();
+    b.detach();
+
+    bool sign_ { a.convert_to_signed() != b.convert_to_signed() };
+    big_integer tmp { };
+    tmp.to_big_object();
+    tmp.reallocate(a.size() + b.size());
+
+    for (size_t i = 0; i < a.size(); ++i) {
+        tr_value_type carry { };
+        for (size_t j = 0; j < b.size(); ++j) {
+            tr_value_type res { static_cast<tr_value_type>(a[i]) * b[j] + carry };
+            carry = res / BASE;
+            if (static_cast<tr_value_type>(tmp[i + j]) + res % BASE >= BASE)
+                tmp[i + j + 1] += 1;
+            tmp[i + j] += res % BASE;
+        }
+        tmp[i + b.size()] += carry;
+    }
+    tmp.convert_to_2s(sign_);
+    tmp.trim();
+    swap(tmp);
+    return *this;
+}
+
+big_integer& big_integer::operator/=(big_integer const& rhs)
+{
+    big_integer a { *this };
+    big_integer b { rhs };
+    big_integer tmp { };
+
+    if (a.state == SMALL && b.state == SMALL)
+    {
+        tmp.number = a.number / b.number;
+        swap(tmp);
+        return *this;
+    }
+
+    if (a.state == SMALL && b.state == BIG)
+    {
+        swap(tmp);
+        return *this;
+    }
+
+    if (b.state == SMALL) to_big_object();
+    a.detach();
+    b.detach();
+
+    bool sign_ { a.convert_to_signed() != b.convert_to_signed() };
+
+    tr_value_type f { BASE / (b[b.size() - 1] + 1) };
+
+    a.convert_to_2s(0);
+    b.convert_to_2s(0);
+    if (a < b)
+    {
+        swap(tmp);
+        return *this;
+    }
+
+    tmp.to_big_object();
+
+    big_integer r { a * f };
+    big_integer d { b * f };
+    r.convert_to_signed();
+    d.convert_to_signed();  // sign is always positive
+
+    tmp.reallocate(r.size() - d.size() + 1);
+    big_integer dq { };
+
+    big_integer h { };
+
+    for (int k = r.size() - 1; k > r.size() - d.size(); k--)
+    {
+        h *= BASE;
+        h += r[k];
+    }
+
+    for (size_t k = r.size() - d.size() + 1; k--;)
+    {
+        h *= BASE;
+        h += r[k];
+
+        tr_value_type r2 { h[h.size() - 1] };
+        if (h.size() > d.size())
+        {
+            r2 *= BASE;
+            r2 += h[h.size() - 2];
+        }
+
+        tr_value_type d1 { d[d.size() - 1] };
+        tr_value_type qt { std::min(r2 / d1, static_cast<tr_value_type>(BASE - 1)) };
+
+        dq = d * qt;
+        while (h < dq) {
+            qt--;
+            dq -= d;
+        }
+        tmp[k] = qt;
+        h -= dq;
+    }
+    tmp.convert_to_2s(sign_);
+    tmp.trim();
+    swap(tmp);
+    return *this;
+}
+
 big_integer& big_integer::operator%=(big_integer const& rhs)
 {
     return *this = *this - (*this / rhs) * rhs;
@@ -266,15 +389,31 @@ bool operator<(big_integer const& a, big_integer const& b)
 
 bool operator>(big_integer const& a, big_integer const& b)
 {
-    if (a.state == big_integer::BIG && b.state == big_integer::SMALL) return true;
-    if (a.state == big_integer::SMALL && b.state == big_integer::BIG) return false;
-    if (a.state == big_integer::SMALL) return a.number > b.number;
-    if (a.size() > b.size()) return true;
-    if (b.size() > a.size()) return false;
-    for (int i = a.size() - 1; i >= 0; --i)
+    if (a.state == big_integer::SMALL && b.state == big_integer::SMALL) return a.number > b.number;
+    big_integer x { a };
+    big_integer y { b };
+    x.detach();
+    y.detach();
+    if (x.state == big_integer::SMALL) x.to_big_object();
+    if (y.state == big_integer::SMALL) y.to_big_object();
+    bool sign_a { x.convert_to_signed() };
+    bool sign_b { y.convert_to_signed() };
+
+    if (!sign_a && sign_b) return true;
+    if (sign_a && !sign_b) return false;
+    if (sign_a && sign_b)
     {
-        if (a[i] > b[i]) return true;
-        if (a[i] < b[i]) return false;
+        x.convert_to_2s(0);
+        y.convert_to_2s(0);
+        return x < y;
+    }
+
+    if (x.size() > y.size()) return true;
+    if (y.size() > x.size()) return false;
+    for (int i = x.size() - 1; i >= 0; --i)
+    {
+        if (x[i] > y[i]) return true;
+        if (x[i] < y[i]) return false;
     }
     return false;
 }
@@ -306,18 +445,19 @@ void big_integer::to_big_object()
 
 void big_integer::detach()
 {
-    if (state == SMALL) return;
+    if (state == SMALL || ref_count() == 0) return;
     big_integer tmp;
     value_type* old { array };
     tmp.array = new value_type[*(old - 1) + 2] + 2;
     memcpy(tmp.array - 1, old - 1, sizeof(value_type) * (*(old - 1) + 1));
     tmp.ref_count() = 0;
-    swap(std::move(tmp));
+    swap(tmp);
     --array[-2];    // if no exception
 }
 
 bool big_integer::convert_to_signed()
 {
+    detach();
     bool sign_ { sign() };
     *this = ++~*this;
     return sign_;
@@ -325,7 +465,8 @@ bool big_integer::convert_to_signed()
 
 void big_integer::convert_to_2s(bool sign)
 {
-    if (sign) return;
+    detach();
+    if (!sign) return;
     *this = ++~*this;
 }
 
@@ -344,6 +485,7 @@ void big_integer::reallocate(value_type new_size)
 void big_integer::trim()
 {
     if (state == SMALL) return;
+    detach();
     value_type zero { sign() ? ~0u : 0u };
     size_t size_ { size() };
     while (size_ > 1 && operator[](size_ - 1) == zero)

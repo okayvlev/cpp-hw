@@ -70,7 +70,7 @@ private:
 
     void to_big_object();
     void detach();
-    void swap(big_integer&& tmp);
+    void swap(big_integer& tmp);
     void quick_copy(const big_integer& other);
     bool convert_to_signed();
     void convert_to_2s(bool sign);
