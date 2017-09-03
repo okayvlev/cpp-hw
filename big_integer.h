@@ -58,15 +58,16 @@ private:
     {
         value_type number;
         value_type* array;
-    };
+    } representation;   // the code would be nicer if the union was in placement,
+                        // but the variable is needed for swap function alone
 
-    value_type& operator[](size_t n) { return array[n]; }
-    value_type& ref_count() { return array[-2]; }
-    value_type& size() { return array[-1]; }
-    const value_type& operator[](size_t n) const { return array[n]; }
-    const value_type& ref_count() const { return array[-2]; }
-    const value_type& size() const { return array[-1]; }
-    bool sign() const { return array[size() - 1] >> (BITS - 1); }
+    value_type& operator[](size_t n) { return representation.array[n]; }
+    value_type& ref_count() { return representation.array[-2]; }
+    value_type& size() { return representation.array[-1]; }
+    const value_type& operator[](size_t n) const { return representation.array[n]; }
+    const value_type& ref_count() const { return representation.array[-2]; }
+    const value_type& size() const { return representation.array[-1]; }
+    bool sign() const { return representation.array[size() - 1] >> (BITS - 1); }
 
     void to_big_object();
     void detach();
