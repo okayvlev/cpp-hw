@@ -20,13 +20,14 @@ void big_integer::quick_copy(const big_integer& other)
     }
 }
 
-big_integer::big_integer(const big_integer& other)
+big_integer::big_integer(const big_integer& other) : big_integer { }
 {
     std::cout << "copy constructor\n";
     try
     {
         big_integer tmp;
         tmp.quick_copy(other);
+        std::cout << state << std::endl;
         swap(tmp);
     }
     catch (...) { /* reporting error */ };
@@ -35,11 +36,15 @@ big_integer::big_integer(const big_integer& other)
 big_integer::big_integer(int a)
 {
     std::cout << "int constructor\n";
-    state = SMALL;
-    representation.number = a;
+    try
+    {
+        state = SMALL;
+        representation.number = a;
+    }
+    catch (...) { /* reporting error */ };
 }
 
-big_integer::big_integer(std::string const& str)
+big_integer::big_integer(std::string const& str) : big_integer { }
 {
     std::cout << "string constructor\n";
     try
@@ -75,10 +80,36 @@ big_integer::~big_integer()
     }
 }
 
-void big_integer::swap(big_integer& tmp)   // assuming tmp won't be used anymore
+void big_integer::swap(big_integer& tmp)
 {
     std::cout << "swap\n";
-    std::swap(representation, tmp.representation);
+    std::cout << "this.state: " << state << " tmp.state: " << tmp.state << std::endl;
+    if (state == BIG && tmp.state == BIG)
+    {
+        std::swap(representation.array, tmp.representation.array);
+    }
+    else if (state == SMALL && tmp.state == SMALL)
+    {
+        std::swap(representation.number, tmp.representation.number);
+    }
+    else if (state == SMALL && tmp.state == BIG)
+    {
+        value_type* ptr { tmp.representation.array };
+        tmp.representation.number = representation.number;
+        representation.array = ptr;
+    }
+    else if (state == BIG && tmp.state == SMALL)
+    {
+        value_type* ptr { representation.array };
+        representation.number = tmp.representation.number;
+        tmp.representation.array = ptr;
+    }
+    else
+    {
+        std::cout << "-----------Very---bad-------------\n";
+        exit(0);
+    }
+    //std::swap(representation, tmp.representation);
     std::swap(state, tmp.state);
 }
 
