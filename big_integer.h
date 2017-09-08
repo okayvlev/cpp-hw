@@ -45,6 +45,8 @@ struct big_integer
     friend bool operator>=(big_integer const& a, big_integer const& b);
 
     friend std::string to_string(big_integer const& a);
+    void out();
+    void test();
 
 private:
     static constexpr int BITS { 32 }; // TODO

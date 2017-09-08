@@ -6,9 +6,11 @@ using namespace std;
 int main()
 {
     big_integer a { };
-    big_integer b { };
+    a += 3;
 
-    a += 2;
+    std::cout << "-------=------\n";
+    a.out();
+    std::cout << "-------=------\n";
 
     //std::cout << (a == b) << std::endl;
 

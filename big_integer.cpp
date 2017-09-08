@@ -7,6 +7,7 @@ big_integer::big_integer() : big_integer { 0 } { }
 
 void big_integer::quick_copy(const big_integer& other)
 {
+    //std::cout << "quick copy\n";
     if (other.state == SMALL)
     {
         state = SMALL;
@@ -25,9 +26,7 @@ big_integer::big_integer(const big_integer& other) : big_integer { }
     //std::cout << "copy constructor\n";
     try
     {
-        big_integer tmp;
-        tmp.quick_copy(other);
-        swap(tmp);
+        quick_copy(other);
     }
     catch (...) { /* reporting error */ };
 }
@@ -35,7 +34,7 @@ big_integer::big_integer(const big_integer& other) : big_integer { }
 big_integer::big_integer(int a)
 {
     //std::cout << "int constructor\n";
-    try
+    try // FIXME understand try policy
     {
         state = SMALL;
         representation.number = a;
@@ -59,7 +58,8 @@ big_integer::big_integer(std::string const& str) : big_integer { }
                 tmp += c - '0';
             }
         }
-        if (sign_) tmp = -tmp;
+        if (sign_)
+            tmp = -tmp;
         tmp.trim();
         swap(tmp);
     }
@@ -76,6 +76,7 @@ big_integer::~big_integer()
         {
             detach();
         }
+        //std::cout << "deleting at " << representation.array << "\n";
         delete[](representation.array - 2);
     }
 }
@@ -109,10 +110,10 @@ void big_integer::swap(big_integer& tmp)
 
 big_integer& big_integer::operator=(const big_integer& other)
 {
+    //std::cout << "=\n";
     try
     {
-        big_integer tmp { other };
-        swap(tmp);
+        quick_copy(other);
     }
     catch (...) { /* reporting error */ };
     return *this;
@@ -580,11 +581,15 @@ big_integer operator>>(big_integer a, int b)
 
 bool operator==(big_integer const& a, big_integer const& b) // TODO compare pointers
 {
-    if (a.state != b.state) return false;
-    if (a.state == big_integer::SMALL) return a.representation.number == b.representation.number;
-    if (a.size() != b.size()) return false;
+    if (a.state != b.state)
+        return false;
+    if (a.state == big_integer::SMALL)
+        return a.representation.number == b.representation.number;
+    if (a.size() != b.size())
+        return false;
     for (size_t i = 0; i < a.size(); ++i)
-        if (a[i] != b[i]) return false;
+        if (a[i] != b[i])
+            return false;
     return true;
 }
 
@@ -605,8 +610,10 @@ bool operator>(big_integer const& a, big_integer const& b)
     big_integer y { b };
     x.detach();
     y.detach();
-    if (x.state == big_integer::SMALL) x.to_big_object();
-    if (y.state == big_integer::SMALL) y.to_big_object();
+    if (x.state == big_integer::SMALL)
+        x.to_big_object();
+    if (y.state == big_integer::SMALL)
+        y.to_big_object();
     bool sign_a { x.convert_to_signed() };
     bool sign_b { y.convert_to_signed() };
 
@@ -684,6 +691,7 @@ void big_integer::detach()
     //std::cout << "detach:" << new_array << " from:" << representation.array << "\n";
     memcpy(new_array - 1, representation.array - 1, sizeof(value_type) * (size() + 1));
     std::swap(new_array, representation.array);
+    ref_count() = 0;
     //delete[](new_array - 2);
 }
 
@@ -741,13 +749,13 @@ void big_integer::reallocate(value_type new_size)
     detach();
     new_size += 2;
     value_type* new_arr = new value_type[new_size] { };
+    //std::cout << "reallocate:" << new_arr + 2 << " from:" << representation.array << std::endl;
     memcpy(new_arr, representation.array - 2, std::min(size() + 2, new_size) * sizeof(value_type));
+    //std::cout << "deleting at " << representation.array << "\n";
     delete[](representation.array - 2);
     representation.array = new_arr + 2;
     size() = new_size - 2;
     trim();
-
-    //std::cout << "reallocate:" << representation.array << std::endl;
 }
 
 void big_integer::trim()
@@ -764,10 +772,31 @@ void big_integer::trim()
         state = SMALL;
         value_type* old { representation.array };
         representation.number = operator[](0);
+        //std::cout << "deleting at " << old << "\n";
         delete[](old - 2);
     }
     else
     {
         reallocate(size_);
     }
+}
+
+void big_integer::out()
+{
+    std::cout << (state ? "BIG" : "SMALL") << "\n";
+    if (state == SMALL)
+        std::cout << representation.number << std::endl;
+    else
+    {
+        std::cout << ref_count() << "_" << size() << ": ";
+        for (int i = 0; i < size(); ++i)
+        {
+            std::cout << representation.array[i] << " ";
+        }
+        std::cout << std::endl;
+    }
+}
+
+void big_integer::test()
+{
 }
