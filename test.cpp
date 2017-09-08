@@ -5,11 +5,12 @@ using namespace std;
 
 int main()
 {
-    big_integer a { 1 };
-    big_integer b { 55 };
-    a += b;
+    big_integer a { };
+    big_integer b { };
 
-    std::cout << (a == b) << std::endl;
+    a += 2;
+
+    //std::cout << (a == b) << std::endl;
 
     return 0;
 }

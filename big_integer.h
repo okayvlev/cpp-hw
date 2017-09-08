@@ -73,6 +73,7 @@ private:
     void detach();
     void swap(big_integer& tmp);
     void quick_copy(const big_integer& other);
+    void reverse_bytes();
     bool convert_to_signed();
     void convert_to_2s(bool sign);
     void trim();

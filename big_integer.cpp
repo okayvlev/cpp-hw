@@ -22,12 +22,11 @@ void big_integer::quick_copy(const big_integer& other)
 
 big_integer::big_integer(const big_integer& other) : big_integer { }
 {
-    std::cout << "copy constructor\n";
+    //std::cout << "copy constructor\n";
     try
     {
         big_integer tmp;
         tmp.quick_copy(other);
-        std::cout << state << std::endl;
         swap(tmp);
     }
     catch (...) { /* reporting error */ };
@@ -35,7 +34,7 @@ big_integer::big_integer(const big_integer& other) : big_integer { }
 
 big_integer::big_integer(int a)
 {
-    std::cout << "int constructor\n";
+    //std::cout << "int constructor\n";
     try
     {
         state = SMALL;
@@ -46,7 +45,7 @@ big_integer::big_integer(int a)
 
 big_integer::big_integer(std::string const& str) : big_integer { }
 {
-    std::cout << "string constructor\n";
+    //std::cout << "string constructor\n";
     try
     {
         bool sign_ { str.size() > 0 && str[0] == '-' };
@@ -69,9 +68,10 @@ big_integer::big_integer(std::string const& str) : big_integer { }
 
 big_integer::~big_integer()
 {
-    std::cout << "destructor\n";
+    //std::cout << "destructor\n";
     if (state == BIG)
     {
+        //std::cout << representation.array << std::endl;
         if (ref_count() != 0)
         {
             detach();
@@ -82,8 +82,7 @@ big_integer::~big_integer()
 
 void big_integer::swap(big_integer& tmp)
 {
-    std::cout << "swap\n";
-    std::cout << "this.state: " << state << " tmp.state: " << tmp.state << std::endl;
+    //std::cout << "swap\n";
     if (state == BIG && tmp.state == BIG)
     {
         std::swap(representation.array, tmp.representation.array);
@@ -104,12 +103,7 @@ void big_integer::swap(big_integer& tmp)
         representation.number = tmp.representation.number;
         tmp.representation.array = ptr;
     }
-    else
-    {
-        std::cout << "-----------Very---bad-------------\n";
-        exit(0);
-    }
-    //std::swap(representation, tmp.representation);
+    //std::swap(representation, tmp.representation); TODO
     std::swap(state, tmp.state);
 }
 
@@ -126,7 +120,7 @@ big_integer& big_integer::operator=(const big_integer& other)
 
 big_integer& big_integer::operator+=(big_integer const& rhs)
 {
-    std::cout << "+=\n";
+    //std::cout << "+=\n";
     big_integer a { *this };
     big_integer b { rhs };
     a.detach();
@@ -138,7 +132,7 @@ big_integer& big_integer::operator+=(big_integer const& rhs)
         return a -= -b;
 
     bool sign_ { a.convert_to_signed() }; // equal signs
-    std::cout << sign_ << std::endl;
+
     b.convert_to_signed();
     a.reallocate(std::max(a.size(), b.size()) + 1);
 
@@ -272,7 +266,7 @@ big_integer& big_integer::operator/=(big_integer const& rhs)
 
     big_integer h { };
 
-    for (int k = r.size() - 1; k > r.size() - d.size(); k--)
+    for (int k = r.size() - 1; k > static_cast<int>(r.size() - d.size()); --k)
     {
         h *= BASE;
         h += r[k];
@@ -464,7 +458,7 @@ big_integer& big_integer::operator>>=(int rhs)
         tmp.to_big_object();
     tmp /= d;
 
-    int h { rhs / BITS };
+    value_type h { static_cast<value_type>(rhs / BITS) };
 
     if (h >= tmp.size())
     {
@@ -472,7 +466,7 @@ big_integer& big_integer::operator>>=(int rhs)
         swap(tmp);
         return *this;
     }
-    for (int i = 0; i < tmp.size() - h; ++i)
+    for (size_t i = 0; i < tmp.size() - h; ++i) // TODO get rid of misuse of value_type
     {
         tmp[i] = tmp[i + h];
     }
@@ -492,13 +486,18 @@ big_integer big_integer::operator-() const
     return ++~*this;
 }
 
+void big_integer::reverse_bytes()
+{
+    for (size_t i = 0; i < size(); ++i)
+        representation.array[i] = ~representation.array[i];
+}
+
 big_integer big_integer::operator~() const
 {
     if (state == SMALL) return ~representation.number;
     big_integer tmp { *this };
     tmp.detach();
-    for (size_t i = 0; i < tmp.size(); ++i)
-        tmp[i] = ~tmp[i];
+    tmp.reverse_bytes();
     tmp.trim();
     return tmp;
 }
@@ -579,7 +578,7 @@ big_integer operator>>(big_integer a, int b)
     return a >>= b;
 }
 
-bool operator==(big_integer const& a, big_integer const& b)
+bool operator==(big_integer const& a, big_integer const& b) // TODO compare pointers
 {
     if (a.state != b.state) return false;
     if (a.state == big_integer::SMALL) return a.representation.number == b.representation.number;
@@ -670,6 +669,7 @@ void big_integer::to_big_object()
     value_type number_ { representation.number };
     state = BIG;
     representation.array = new value_type[3] + 2;  // shift for optimizing operator[] call
+    //std::cout << "to big:" << representation.array << std::endl;
     size() = 1;
     ref_count() = 0;
     operator[](0) = number_;
@@ -677,31 +677,23 @@ void big_integer::to_big_object()
 
 void big_integer::detach()
 {
-    std::cout << "detach\n";
-    if (state == SMALL) return;
-    std::cout << "not small\n";
+    //std::cout << "detach\n";
     if (state == SMALL || ref_count() == 0) return;
-    std::cout << "pass\n";
     --ref_count();
-    value_type* new_array { new value_type[*(representation.array - 1) + 2] + 2 };
-    memcpy(new_array - 1, representation.array - 1, sizeof(value_type) * (*(representation.array - 1) + 1));
+    value_type* new_array { new value_type[size() + 2] + 2 };
+    //std::cout << "detach:" << new_array << " from:" << representation.array << "\n";
+    memcpy(new_array - 1, representation.array - 1, sizeof(value_type) * (size() + 1));
     std::swap(new_array, representation.array);
-    delete[](new_array - 2);
+    //delete[](new_array - 2);
 }
 
 bool big_integer::convert_to_signed()
 {
-    std::cout << "convert\n";
+    //std::cout << "convert\n";
     big_integer a { *this };
-
-    if (state == BIG) std::cout << "BIG" << std::endl;
-    std::cout << "init\n";
     a.detach();
-    std::cout << "ok" << std::endl;
-    std::cout << a.state << "\n";
-    std::cout << a.representation.array << "\n" << &a[0] << " " << a.sign() << std::endl;
     bool sign_ { a.sign() };
-    a = ~a;
+    a.reverse_bytes();
     bool carry { 1 };
     for (size_t i = 0; i < a.size(); ++i)
     {
@@ -716,12 +708,14 @@ bool big_integer::convert_to_signed()
         a.reallocate(a.size() + 1);
         a[a.size() - 1] = 1;
     }
+
     swap(a);
     return sign_;
 }
 
 void big_integer::convert_to_2s(bool sign)
 {
+    //std::cout << "convert to 2s\n";
     detach();
     if (!sign) return;
     *this = ~*this;
@@ -750,8 +744,10 @@ void big_integer::reallocate(value_type new_size)
     memcpy(new_arr, representation.array - 2, std::min(size() + 2, new_size) * sizeof(value_type));
     delete[](representation.array - 2);
     representation.array = new_arr + 2;
-    size() = new_size;
+    size() = new_size - 2;
     trim();
+
+    //std::cout << "reallocate:" << representation.array << std::endl;
 }
 
 void big_integer::trim()
