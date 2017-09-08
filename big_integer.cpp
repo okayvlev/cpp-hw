@@ -131,9 +131,9 @@ big_integer& big_integer::operator+=(big_integer const& rhs)
 
     if (a.sign() != b.sign())
         return a -= -b;
-
+    a.out();
     bool sign_ { a.convert_to_signed() }; // equal signs
-
+    a.out();
     b.convert_to_signed();
     a.reallocate(std::max(a.size(), b.size()) + 1);
 
@@ -193,8 +193,10 @@ big_integer& big_integer::operator*=(big_integer const& rhs)
     big_integer a { *this };
     big_integer b { rhs };
 
-    if (a.state == SMALL) to_big_object();
-    if (b.state == SMALL) to_big_object();
+    if (a.state == SMALL)
+        to_big_object();
+    if (b.state == SMALL)
+        to_big_object();
     a.detach();
     b.detach();
 
@@ -239,7 +241,8 @@ big_integer& big_integer::operator/=(big_integer const& rhs)
         return *this;
     }
 
-    if (b.state == SMALL) to_big_object();
+    if (b.state == SMALL)
+        to_big_object();
     a.detach();
     b.detach();
 
@@ -679,7 +682,8 @@ void big_integer::to_big_object()
     //std::cout << "to big:" << representation.array << std::endl;
     size() = 1;
     ref_count() = 0;
-    operator[](0) = number_;
+    operator[](0) = abs(number_);
+    convert_to_2s(number_ < 0);
 }
 
 void big_integer::detach()
@@ -698,18 +702,19 @@ void big_integer::detach()
 bool big_integer::convert_to_signed()
 {
     //std::cout << "convert\n";
+    if (!sign())
+        return 0;
     big_integer a { *this };
     a.detach();
     bool sign_ { a.sign() };
     a.reverse_bytes();
-    bool carry { 1 };
-    for (size_t i = 0; i < a.size(); ++i)
+    bool carry { ++a[0] == 0u };
+    for (size_t i = 1; i < a.size(); ++i)
     {
-        if (++a[i] != 0u) // no overflow
-        {
-            carry = 0;
+        if (!carry)
             break;
-        }
+        if (++a[i] != 0u) // no overflow
+            carry = 0;
     }
     if (carry)
     {
@@ -724,17 +729,16 @@ bool big_integer::convert_to_signed()
 void big_integer::convert_to_2s(bool sign)
 {
     //std::cout << "convert to 2s\n";
-    detach();
     if (!sign) return;
-    *this = ~*this;
-    bool carry { 1 };
-    for (size_t i = 0; i < size(); ++i)
+    detach();
+    reverse_bytes();
+    bool carry { ++operator[](0) == 0u };
+    for (size_t i = 1; i < size(); ++i)
     {
-        if (++operator[](i) != 0u) // no overflow
-        {
-            carry = 0;
+        if (!carry)
             break;
-        }
+        if (++operator[](i) != 0u) // no overflow
+            carry = 0;
     }
     if (carry)
     {
@@ -755,7 +759,6 @@ void big_integer::reallocate(value_type new_size)
     delete[](representation.array - 2);
     representation.array = new_arr + 2;
     size() = new_size - 2;
-    trim();
 }
 
 void big_integer::trim()
@@ -766,7 +769,7 @@ void big_integer::trim()
     size_t size_ { size() };
     while (size_ > 1 && operator[](size_ - 1) == zero)
         --size_;
-    if (sign() != (0u == zero)) ++size_;
+    if (sign() != (~0u == zero)) ++size_;
     if (size_ == 1)
     {
         state = SMALL;

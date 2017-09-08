@@ -5,8 +5,9 @@ using namespace std;
 
 int main()
 {
-    big_integer a { };
-    a += 3;
+    big_integer a { 0 };
+    a += 101010;
+    a *= 3;
 
     std::cout << "-------=------\n";
     a.out();
