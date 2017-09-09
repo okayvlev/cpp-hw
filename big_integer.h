@@ -50,7 +50,7 @@ struct big_integer
 
 private:
     static constexpr int BITS { 32 }; // TODO
-    static constexpr value_type BASE { ~0u }; // TODO
+    static constexpr tr_value_type BASE { static_cast<tr_value_type>(1) << BITS }; // TODO
     enum
     {
         SMALL,
@@ -58,7 +58,7 @@ private:
     } state;
     union
     {
-        value_type number;
+        long long number;
         value_type* array;
     } representation;   // the code would be nicer if the union was in placement,
                         // but the variable is needed for swap function alone
@@ -69,7 +69,7 @@ private:
     const value_type& operator[](size_t n) const { return representation.array[n]; }
     const value_type& ref_count() const { return representation.array[-2]; }
     const value_type& size() const { return representation.array[-1]; }
-    bool sign() const { return representation.array[size() - 1] >> (BITS - 1); }
+    bool sign() const { return state == BIG ? representation.array[size() - 1] >> (BITS - 1) : representation.number < 0; }
 
     void to_big_object();
     void detach();

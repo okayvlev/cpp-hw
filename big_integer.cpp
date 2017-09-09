@@ -113,6 +113,8 @@ big_integer& big_integer::operator=(const big_integer& other)
     //std::cout << "=\n";
     try
     {
+        big_integer tmp { };
+        tmp.swap(*this);
         quick_copy(other);
     }
     catch (...) { /* reporting error */ };
@@ -121,22 +123,22 @@ big_integer& big_integer::operator=(const big_integer& other)
 
 big_integer& big_integer::operator+=(big_integer const& rhs)
 {
-    //std::cout << "+=\n";
+    std::cout << "+=\n";
     big_integer a { *this };
     big_integer b { rhs };
     a.detach();
     b.detach();
-    a.to_big_object();
-    b.to_big_object();
 
     if (a.sign() != b.sign())
         return a -= -b;
-    a.out();
+
+    a.to_big_object();
+    b.to_big_object();
+
     bool sign_ { a.convert_to_signed() }; // equal signs
-    a.out();
+
     b.convert_to_signed();
     a.reallocate(std::max(a.size(), b.size()) + 1);
-
     tr_value_type carry = 0;
     for (size_t i = 0; i < a.size(); ++i)
     {
@@ -148,6 +150,7 @@ big_integer& big_integer::operator+=(big_integer const& rhs)
     }
     a.convert_to_2s(sign_);
     a.trim();
+
     swap(a);
     return *this;
 }
@@ -158,13 +161,15 @@ big_integer& big_integer::operator-=(big_integer const& rhs)
     big_integer b { rhs };
 
     if (a.state == SMALL)
-        to_big_object();
+        a.to_big_object();
     if (b.state == SMALL)
-        to_big_object();
-    a.detach();
-    b.detach();
+        b.to_big_object();
+
     if (a.sign() != b.sign())
         return a += -b;
+
+    a.detach();
+    b.detach();
 
     bool sign_ { a.convert_to_signed() }; // equal signs
     b.convert_to_signed();
@@ -194,13 +199,13 @@ big_integer& big_integer::operator*=(big_integer const& rhs)
     big_integer b { rhs };
 
     if (a.state == SMALL)
-        to_big_object();
+        a.to_big_object();
     if (b.state == SMALL)
-        to_big_object();
+        b.to_big_object();
     a.detach();
     b.detach();
-
     bool sign_ { a.convert_to_signed() != b.convert_to_signed() };
+
     big_integer tmp { };
     tmp.to_big_object();
     tmp.reallocate(a.size() + b.size());
@@ -209,6 +214,7 @@ big_integer& big_integer::operator*=(big_integer const& rhs)
         tr_value_type carry { };
         for (size_t j = 0; j < b.size(); ++j) {
             tr_value_type res { static_cast<tr_value_type>(a[i]) * b[j] + carry };
+            std::cout << BASE << "\n";
             carry = res / BASE;
             if (static_cast<tr_value_type>(tmp[i + j]) + res % BASE >= BASE)
                 tmp[i + j + 1] += 1;
@@ -216,6 +222,7 @@ big_integer& big_integer::operator*=(big_integer const& rhs)
         }
         tmp[i + b.size()] += carry;
     }
+    tmp.out();
     tmp.convert_to_2s(sign_);
     tmp.trim();
     swap(tmp);
@@ -242,7 +249,7 @@ big_integer& big_integer::operator/=(big_integer const& rhs)
     }
 
     if (b.state == SMALL)
-        to_big_object();
+        b.to_big_object();
     a.detach();
     b.detach();
 
@@ -270,15 +277,17 @@ big_integer& big_integer::operator/=(big_integer const& rhs)
 
     big_integer h { };
 
+    static const big_integer BIG_BASE { big_integer { 1 } << BITS };
+
     for (int k = r.size() - 1; k > static_cast<int>(r.size() - d.size()); --k)
     {
-        h *= BASE;
+        h *= BIG_BASE;
         h += r[k];
     }
 
     for (size_t k = r.size() - d.size() + 1; k--;)
     {
-        h *= BASE;
+        h *= BIG_BASE;
         h += r[k];
 
         tr_value_type r2 { h[h.size() - 1] };
@@ -676,7 +685,7 @@ std::ostream& operator<<(std::ostream& s, big_integer const& a)
 void big_integer::to_big_object()
 {
     if (state == BIG) return;
-    value_type number_ { representation.number };
+    int number_ { representation.number };
     state = BIG;
     representation.array = new value_type[3] + 2;  // shift for optimizing operator[] call
     //std::cout << "to big:" << representation.array << std::endl;
@@ -766,10 +775,12 @@ void big_integer::trim()
     if (state == SMALL) return;
     detach();
     value_type zero { sign() ? ~0u : 0u };
+
     size_t size_ { size() };
     while (size_ > 1 && operator[](size_ - 1) == zero)
         --size_;
-    if (sign() != (~0u == zero)) ++size_;
+
+    if ((representation.array[size_ - 1] >> (BITS - 1)) != (~0u == zero)) ++size_;
     if (size_ == 1)
     {
         state = SMALL;
@@ -792,7 +803,7 @@ void big_integer::out()
     else
     {
         std::cout << ref_count() << "_" << size() << ": ";
-        for (int i = 0; i < size(); ++i)
+        for (size_t i = 0; i < size(); ++i)
         {
             std::cout << representation.array[i] << " ";
         }
