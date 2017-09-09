@@ -125,9 +125,16 @@ namespace // Implementation details
         is.read(read_buffer, size);
     }
 
+    void bad_file()
+    {
+        std::cout << "File is corrupted\n";
+        exit(0);
+    }
+
     void write_header()
     {
         unsigned unique_chars { };
+
         for (int c = CHAR_MIN; c <= CHAR_MAX; ++c) { if (char_count[c] > 0) ++unique_chars; }
         os.write(reinterpret_cast<char*>(&unique_chars), sizeof(unsigned));
         os.write(reinterpret_cast<char*>(&file_size), sizeof(ull));
@@ -149,7 +156,10 @@ namespace // Implementation details
         unsigned unique_chars { };
 
         is.read(reinterpret_cast<char*>(&unique_chars), sizeof(unsigned));
+        if (unique_chars > CHAR_RANGE)
+            bad_file();
         is.read(reinterpret_cast<char*>(&file_size), sizeof(ull));
+
         for (unsigned i = 0; i < unique_chars; ++i) {
             char c;
             unsigned size;
@@ -167,6 +177,8 @@ namespace // Implementation details
             code_table[static_cast<int>(c)] = { size, digits };
             ca.add(code_table[static_cast<int>(c)], c);
         }
+        if (!is)
+            bad_file();
     }
 
     void write_block(int size = BUFFER_SIZE)
@@ -323,21 +335,30 @@ void decompress(const char* src, const char* dst)
 {
     init_streams(src, dst);
     if (is_file_empty()) return;
-    read_header();
-    ca.cur = 0;
-    written_bytes = 0;
-    process_file([](char c)
+    try
     {
-        for (int k = CHAR_DIGITS - 1; k >= 0; --k) {
-            unsigned bit { ((1 << k) & c) > 0 };
-            ca.cur = ca.v[ca.cur].small_links[bit];
-            if (ca.v[ca.cur].small_links[0] == 0 && ca.v[ca.cur].small_links[1] == 0)   // Is leaf
-            {
-                if (file_size < ++written_bytes) return;    // Last bit may contain zeroes at the end, which can lead to appearance of extra bytes
-                write_char_to_buffer(ca.v[ca.cur].leaf);
-                ca.cur = 0;
+        read_header();
+        ca.cur = 0;
+        written_bytes = 0;
+        process_file([](char c)
+        {
+            for (int k = CHAR_DIGITS - 1; k >= 0; --k) {
+                unsigned bit { ((1 << k) & c) > 0 };
+                ca.cur = ca.v[ca.cur].small_links[bit];
+                if (ca.v[ca.cur].small_links[0] == 0 && ca.v[ca.cur].small_links[1] == 0)   // Is leaf
+                {
+                    if (file_size < ++written_bytes) return;    // Last bit may contain zeroes at the end, which can lead to appearance of extra bytes
+                    write_char_to_buffer(ca.v[ca.cur].leaf);
+                    ca.cur = 0;
+                }
             }
-        }
-    }, is.cur);
-    flush_buffer_to_counter();
+        }, is.cur);
+        if (!is)
+            bad_file();
+        flush_buffer_to_counter();
+    }
+    catch (...)
+    {
+        bad_file();
+    }
 }
