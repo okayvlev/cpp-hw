@@ -3,8 +3,8 @@
 
 struct big_integer
 {
-    using value_type = uint32_t;    // any unsigned type should fit
-    using tr_value_type = uint64_t; // any unsigned type twice as large as value_type
+    using value_type = uint32_t;
+    using tr_value_type = uint64_t;
 
     big_integer();
     big_integer(const big_integer& other);
@@ -45,7 +45,7 @@ struct big_integer
     friend bool operator>=(big_integer const& a, big_integer const& b);
 
     friend std::string to_string(big_integer const& a);
-    void out();
+    void out() const;
     void test();
 
 private:

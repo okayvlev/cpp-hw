@@ -214,7 +214,6 @@ big_integer& big_integer::operator*=(big_integer const& rhs)
         tr_value_type carry { };
         for (size_t j = 0; j < b.size(); ++j) {
             tr_value_type res { static_cast<tr_value_type>(a[i]) * b[j] + carry };
-            std::cout << BASE << "\n";
             carry = res / BASE;
             if (static_cast<tr_value_type>(tmp[i + j]) + res % BASE >= BASE)
                 tmp[i + j + 1] += 1;
@@ -222,7 +221,6 @@ big_integer& big_integer::operator*=(big_integer const& rhs)
         }
         tmp[i + b.size()] += carry;
     }
-    tmp.out();
     tmp.convert_to_2s(sign_);
     tmp.trim();
     swap(tmp);
@@ -231,6 +229,7 @@ big_integer& big_integer::operator*=(big_integer const& rhs)
 
 big_integer& big_integer::operator/=(big_integer const& rhs)
 {
+    std::cout << "/=\n";
     big_integer a { *this };
     big_integer b { rhs };
     big_integer tmp { };
@@ -279,6 +278,10 @@ big_integer& big_integer::operator/=(big_integer const& rhs)
 
     static const big_integer BIG_BASE { big_integer { 1 } << BITS };
 
+    tr_value_type d1 { d[d.size() - 1] };
+    if (d1 == 0u && d.size() > 1)
+        d1 = d[d.size() - 2];
+
     for (int k = r.size() - 1; k > static_cast<int>(r.size() - d.size()); --k)
     {
         h *= BIG_BASE;
@@ -297,7 +300,6 @@ big_integer& big_integer::operator/=(big_integer const& rhs)
             r2 += h[h.size() - 2];
         }
 
-        tr_value_type d1 { d[d.size() - 1] };
         tr_value_type qt { std::min(r2 / d1, static_cast<tr_value_type>(BASE - 1)) };
 
         dq = d * qt;
@@ -405,10 +407,8 @@ big_integer& big_integer::operator^=(big_integer const& rhs)
     big_integer b { rhs };
     a.detach();
     b.detach();
-    if (a.state == SMALL)
-        a.to_big_object();
-    if (b.state == SMALL)
-        b.to_big_object();
+    a.to_big_object();
+    b.to_big_object();
 
     tmp.to_big_object();
     tmp.reallocate(std::max(a.size(), b.size()));
@@ -429,6 +429,7 @@ big_integer& big_integer::operator^=(big_integer const& rhs)
 // FIXME add trim everywhere
 big_integer& big_integer::operator<<=(int rhs)
 {
+    std::cout << "<<=\n";
     value_type d { 1 };
     big_integer tmp { *this };
 
@@ -437,13 +438,13 @@ big_integer& big_integer::operator<<=(int rhs)
         d *= 2;
         --rhs;
     }
+
     tmp.detach();
-    if (tmp.state == SMALL)
-        tmp.to_big_object();
-    tmp *= d;
+    if (d > 1)
+        tmp *= big_integer(d / 2) * 2;  // in case d is larger than int; NOTE: ad-hoc
+    tmp.to_big_object();
 
     int h { rhs / BITS };
-
     tmp.reallocate(tmp.size() + h);
     for (int i = tmp.size() - 1; i >= h; --i)
     {
@@ -458,6 +459,7 @@ big_integer& big_integer::operator<<=(int rhs)
 
 big_integer& big_integer::operator>>=(int rhs)
 {
+    std::cout << ">>=\n";
     value_type d { 1 };
     big_integer tmp { *this };
 
@@ -467,10 +469,9 @@ big_integer& big_integer::operator>>=(int rhs)
         --rhs;
     }
     tmp.detach();
-    if (tmp.state == SMALL)
-        tmp.to_big_object();
-    tmp /= d;
-
+    tmp /= big_integer(d / 2) * 2;  // in case d is larger than int; NOTE: ad-hoc
+    tmp.to_big_object();
+    
     value_type h { static_cast<value_type>(rhs / BITS) };
 
     if (h >= tmp.size())
@@ -685,7 +686,7 @@ std::ostream& operator<<(std::ostream& s, big_integer const& a)
 void big_integer::to_big_object()
 {
     if (state == BIG) return;
-    int number_ { representation.number };
+    int number_ { static_cast<int>(representation.number) };
     state = BIG;
     representation.array = new value_type[3] + 2;  // shift for optimizing operator[] call
     //std::cout << "to big:" << representation.array << std::endl;
@@ -795,7 +796,7 @@ void big_integer::trim()
     }
 }
 
-void big_integer::out()
+void big_integer::out() const
 {
     std::cout << (state ? "BIG" : "SMALL") << "\n";
     if (state == SMALL)
