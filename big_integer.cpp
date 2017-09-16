@@ -33,7 +33,7 @@ big_integer::big_integer(const big_integer& other) : big_integer { }
 
 big_integer::big_integer(int a)
 {
-    //std::cout << "int constructor\n";
+    //std::cout << "int constructor " << a << "\n";
     try // FIXME understand try policy
     {
         state = SMALL;
@@ -178,6 +178,13 @@ big_integer& big_integer::operator-=(big_integer const& rhs)
     if (a.sign() != b.sign())
     {
         big_integer tmp { a + (-b) };
+        swap(tmp);
+        return *this;
+    }
+
+    if (a == b)
+    {
+        big_integer tmp { };
         swap(tmp);
         return *this;
     }
@@ -550,10 +557,16 @@ big_integer big_integer::operator-() const
         return *this;
 
     big_integer tmp { *this };
-
     tmp.detach();
     tmp.to_big_object();
+    bool sign_ { tmp.sign() };
     tmp.simple_conversion();
+    if (tmp.sign() == sign_)
+    {
+        tmp.reallocate(tmp.size() + 1);
+        if (!sign_)
+            tmp.operator[](tmp.size() - 1) = ~0u;
+    }
     tmp.trim();
 
     return tmp;

@@ -6,11 +6,10 @@ using namespace std;
 
 int main()
 {
-    big_integer a = 5;
-    big_integer b = -20;
+    big_integer a = std::numeric_limits<int>::min();
+    big_integer b = -a;
     //std::cout << (a + b == -15) << "\n";
-    a += b;
-    std::cout << a << "\n";
+    std::cout << b - 1 << "\n";
 
     return 0;
 }
