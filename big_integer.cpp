@@ -130,7 +130,7 @@ big_integer& big_integer::operator=(const big_integer& other)
 
 big_integer& big_integer::operator+=(big_integer const& rhs)
 {
-    std::cout << "+=\n";
+    //std::cout << "+=\n";
     big_integer a { *this };
     big_integer b { rhs };
     a.detach();
@@ -236,7 +236,7 @@ big_integer& big_integer::operator*=(big_integer const& rhs)
 
 big_integer& big_integer::operator/=(big_integer const& rhs)
 {
-    std::cout << "/=\n";
+    //std::cout << "/=\n";
     big_integer a { *this };
     big_integer b { rhs };
     big_integer tmp { };
@@ -464,7 +464,7 @@ big_integer& big_integer::operator^=(big_integer const& rhs)
 // FIXME add trim everywhere
 big_integer& big_integer::operator<<=(int rhs)
 {
-    std::cout << "<<=\n";
+    //std::cout << "<<=\n";
     value_type d { 1 };
     big_integer tmp { *this };
 
@@ -494,7 +494,7 @@ big_integer& big_integer::operator<<=(int rhs)
 
 big_integer& big_integer::operator>>=(int rhs)
 {
-    std::cout << ">>=\n";
+    //std::cout << ">>=\n";
     value_type d { 1 };
     big_integer tmp { *this };
 
@@ -696,10 +696,17 @@ bool operator>=(big_integer const& a, big_integer const& b)
 
 std::string to_string(big_integer const& a)
 {
+    if (a == 0)
+    {
+        return "0";
+    }
     big_integer tmp { a };
     std::string str { };
     tmp.detach();
+    tmp.to_big_object();
+    
     bool sign_ = tmp.convert_to_signed();
+    tmp.convert_to_2s(0);
 
     while (tmp > 0)
     {
