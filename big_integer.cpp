@@ -534,6 +534,9 @@ big_integer big_integer::operator+() const
 
 big_integer big_integer::operator-() const
 {
+    if (*this == 0)
+        return *this;
+        
     big_integer tmp { *this };
 
     tmp.detach();
