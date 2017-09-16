@@ -137,7 +137,7 @@ big_integer& big_integer::operator+=(big_integer const& rhs)
     big_integer b { rhs };
     a.detach();
     b.detach();
-
+    //std::cout << "========\n";
     if (a.sign() != b.sign())
         return a -= -b;
 
@@ -166,19 +166,17 @@ big_integer& big_integer::operator+=(big_integer const& rhs)
 
 big_integer& big_integer::operator-=(big_integer const& rhs)
 {
+    //std::cout << "-=\n";
     big_integer a { *this };
     big_integer b { rhs };
-
-    if (a.state == SMALL)
-        a.to_big_object();
-    if (b.state == SMALL)
-        b.to_big_object();
+    a.detach();
+    b.detach();
 
     if (a.sign() != b.sign())
         return a += -b;
 
-    a.detach();
-    b.detach();
+    a.to_big_object();
+    b.to_big_object();
 
     bool sign_ { a.convert_to_signed() }; // equal signs
     b.convert_to_signed();
@@ -196,9 +194,14 @@ big_integer& big_integer::operator-=(big_integer const& rhs)
             carry = 0;
         a[i] = res % BASE;
     }
-    a.convert_to_2s(sign_);
+    if (carry)
+    {
+        a[a.size() - 1] = BASE - a[a.size() - 1];
+    }
+    a.convert_to_2s(carry ^ sign_);
     a.trim();
     swap(a);
+
     return *this;
 }
 
@@ -536,7 +539,7 @@ big_integer big_integer::operator-() const
 {
     if (*this == 0)
         return *this;
-        
+
     big_integer tmp { *this };
 
     tmp.detach();
