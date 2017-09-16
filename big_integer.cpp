@@ -532,7 +532,14 @@ big_integer big_integer::operator+() const
 
 big_integer big_integer::operator-() const
 {
-    return ++~*this;
+    big_integer tmp { *this };
+
+    tmp.detach();
+    tmp.to_big_object();
+    tmp.simple_conversion();
+    tmp.trim();
+
+    return tmp;
 }
 
 void big_integer::reverse_bytes()
@@ -704,7 +711,7 @@ std::string to_string(big_integer const& a)
     std::string str { };
     tmp.detach();
     tmp.to_big_object();
-    
+
     bool sign_ = tmp.convert_to_signed();
     tmp.convert_to_2s(0);
 
@@ -757,25 +764,11 @@ bool big_integer::convert_to_signed()
     //std::cout << "convert\n";
     if (!sign())
         return 0;
-    big_integer a { *this };
-    a.detach();
-    bool sign_ { a.sign() };
-    a.reverse_bytes();
-    bool carry { ++a[0] == 0u };
-    for (size_t i = 1; i < a.size(); ++i)
-    {
-        if (!carry)
-            break;
-        if (++a[i] != 0u) // no overflow
-            carry = 0;
-    }
-    if (carry)
-    {
-        a.reallocate(a.size() + 1);
-        a[a.size() - 1] = 1;
-    }
 
-    swap(a);
+    bool sign_ { sign() };
+
+    simple_conversion();
+
     return sign_;
 }
 
@@ -790,8 +783,14 @@ void big_integer::convert_to_2s(bool sign)
         }
         return;
     }
+    simple_conversion();
+}
+
+void big_integer::simple_conversion()
+{
     detach();
     reverse_bytes();
+
     bool carry { ++operator[](0) == 0u };
     for (size_t i = 1; i < size(); ++i)
     {
@@ -834,9 +833,10 @@ void big_integer::trim()
     if ((representation.array[size_ - 1] >> (BITS - 1)) != (~0u == zero)) ++size_;
     if (size_ == 1)
     {
+        bool sign_ { convert_to_signed() };
         state = SMALL;
         value_type* old { representation.array };
-        representation.number = operator[](0);
+        representation.number = (sign_ ? -1 : 1 ) * static_cast<long long>(operator[](0));
         //std::cout << "deleting at " << old << "\n";
         delete[](old - 2);
     }

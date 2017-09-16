@@ -78,6 +78,7 @@ private:
     void reverse_bytes();
     bool convert_to_signed();
     void convert_to_2s(bool sign);
+    void simple_conversion();
     void trim();
     void reallocate(value_type new_size);
     big_integer from_value_type(value_type t);
