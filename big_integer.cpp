@@ -42,6 +42,13 @@ big_integer::big_integer(int a)
     catch (...) { /* reporting error */ };
 }
 
+big_integer big_integer::from_value_type(value_type t)
+{
+    big_integer tmp { };
+    tmp.representation.number = t;
+    return tmp;
+}
+
 big_integer::big_integer(std::string const& str) : big_integer { }
 {
     //std::cout << "string constructor\n";
@@ -265,36 +272,50 @@ big_integer& big_integer::operator/=(big_integer const& rhs)
     }
 
     tmp.to_big_object();
-
+    //a.out();
+    //b.out();
     big_integer r { a * f };
     big_integer d { b * f };
+    r.to_big_object();
+    d.to_big_object();
     r.convert_to_signed();
     d.convert_to_signed();  // sign is always positive
+    size_t size_r { (r.size() > 1 && r[r.size() - 1] == 0u) ? r.size() - 1 : r.size() };
+    size_t size_d { (d.size() > 1 && d[d.size() - 1] == 0u) ? d.size() - 1 : d.size() };
 
-    tmp.reallocate(r.size() - d.size() + 1);
+    //r.out();
+    //d.out();
+    tmp.reallocate(size_r - size_d + 1);
     big_integer dq { };
 
     big_integer h { };
 
     static const big_integer BIG_BASE { big_integer { 1 } << BITS };
 
-    tr_value_type d1 { d[d.size() - 1] };
-    if (d1 == 0u && d.size() > 1)
-        d1 = d[d.size() - 2];
+    tr_value_type d1 { d[size_d - 1] };
 
-    for (int k = r.size() - 1; k > static_cast<int>(r.size() - d.size()); --k)
+    for (int k = size_r - 1; k > static_cast<int>(size_r - size_d); --k)
     {
         h *= BIG_BASE;
-        h += r[k];
+        h += from_value_type(r[k]);
     }
 
-    for (size_t k = r.size() - d.size() + 1; k--;)
+    for (size_t k = size_r - size_d + 1; k--;)
     {
+        //std::cout << "----====\n";
         h *= BIG_BASE;
-        h += r[k];
+        //h.out();
+        h += from_value_type(r[k]);
+        //std::cout << k << " " << r[k] << "\n";
+        //from_value_type(r[k]).out();
+        //std::cout << "h: ";
+        //h.out();
+        if (h.state == SMALL)
+            h.to_big_object();
 
-        tr_value_type r2 { h[h.size() - 1] };
-        if (h.size() > d.size())
+        tr_value_type r2 { h[h.size() - 1] }; // FIXME
+
+        if (h.size() > size_d)
         {
             r2 *= BASE;
             r2 += h[h.size() - 2];
@@ -303,12 +324,25 @@ big_integer& big_integer::operator/=(big_integer const& rhs)
         tr_value_type qt { std::min(r2 / d1, static_cast<tr_value_type>(BASE - 1)) };
 
         dq = d * qt;
+        //std::cout << qt << "qt\n";
+        //std::cout << "dq: ";
+        //dq.out();
+        //std::cout << "d: ";
+        //d.out();
+
         while (h < dq) {
             qt--;
             dq -= d;
         }
         tmp[k] = qt;
+        //std::cout << "H: ";
+        //h.out();
+        //std::cout << "dq: ";
+        //dq.out();
         h -= dq;
+        //std::cout << "H': ";
+        //h.out();
+        //std::cout << "=====---\n";
     }
     tmp.convert_to_2s(sign_);
     tmp.trim();
@@ -471,7 +505,7 @@ big_integer& big_integer::operator>>=(int rhs)
     tmp.detach();
     tmp /= big_integer(d / 2) * 2;  // in case d is larger than int; NOTE: ad-hoc
     tmp.to_big_object();
-    
+
     value_type h { static_cast<value_type>(rhs / BITS) };
 
     if (h >= tmp.size())
@@ -686,13 +720,14 @@ std::ostream& operator<<(std::ostream& s, big_integer const& a)
 void big_integer::to_big_object()
 {
     if (state == BIG) return;
-    int number_ { static_cast<int>(representation.number) };
+    long long number_ { representation.number };
+
     state = BIG;
     representation.array = new value_type[3] + 2;  // shift for optimizing operator[] call
     //std::cout << "to big:" << representation.array << std::endl;
     size() = 1;
     ref_count() = 0;
-    operator[](0) = abs(number_);
+    operator[](0) = number_ >= 0 ? number_ : -number_;
     convert_to_2s(number_ < 0);
 }
 
@@ -739,7 +774,14 @@ bool big_integer::convert_to_signed()
 void big_integer::convert_to_2s(bool sign)
 {
     //std::cout << "convert to 2s\n";
-    if (!sign) return;
+    if (!sign)
+    {
+        if (sign != this->sign())
+        {
+            reallocate(size() + 1);
+        }
+        return;
+    }
     detach();
     reverse_bytes();
     bool carry { ++operator[](0) == 0u };

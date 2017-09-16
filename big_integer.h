@@ -80,6 +80,7 @@ private:
     void convert_to_2s(bool sign);
     void trim();
     void reallocate(value_type new_size);
+    big_integer from_value_type(value_type t);
 };
 
 big_integer operator+(big_integer a, big_integer const& b);
