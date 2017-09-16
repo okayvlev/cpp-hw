@@ -117,6 +117,8 @@ void big_integer::swap(big_integer& tmp)
 
 big_integer& big_integer::operator=(const big_integer& other)
 {
+    if (&other == this)
+        return *this;
     //std::cout << "=\n";
     try
     {
