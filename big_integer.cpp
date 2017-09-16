@@ -260,6 +260,9 @@ big_integer& big_integer::operator/=(big_integer const& rhs)
     //std::cout << "/=\n";
     big_integer a { *this };
     big_integer b { rhs };
+    a.detach();
+    b.detach();
+
     big_integer tmp { };
 
     if (a.state == SMALL && b.state == SMALL)
@@ -275,14 +278,12 @@ big_integer& big_integer::operator/=(big_integer const& rhs)
         return *this;
     }
 
-    if (b.state == SMALL)
-        b.to_big_object();
-    a.detach();
-    b.detach();
+    b.to_big_object();
 
     bool sign_ { a.convert_to_signed() != b.convert_to_signed() };
-
-    tr_value_type f { BASE / (b[b.size() - 1] + 1) };
+    
+    tr_value_type f { BASE / (((b.size() > 1 && b[b.size() - 1] == 0) ?
+        b[b.size() - 2] : b[b.size() - 1]) + 1) };
 
     a.convert_to_2s(0);
     b.convert_to_2s(0);
@@ -291,12 +292,14 @@ big_integer& big_integer::operator/=(big_integer const& rhs)
         swap(tmp);
         return *this;
     }
-
+    if (f == BASE)  // will only increase length of every number
+        f = 1;
     tmp.to_big_object();
     //a.out();
     //b.out();
     big_integer r { a * f };
     big_integer d { b * f };
+
     r.to_big_object();
     d.to_big_object();
     r.convert_to_signed();
@@ -497,7 +500,7 @@ big_integer& big_integer::operator<<=(int rhs)
 
     tmp.detach();
     if (d > 1)
-        tmp *= big_integer(d / 2) * 2;  // in case d is larger than int; NOTE: ad-hoc
+        tmp *= from_value_type(d);
     tmp.to_big_object();
 
     int h { rhs / BITS };
@@ -525,7 +528,7 @@ big_integer& big_integer::operator>>=(int rhs)
         --rhs;
     }
     tmp.detach();
-    tmp /= big_integer(d / 2) * 2;  // in case d is larger than int; NOTE: ad-hoc
+    tmp /= from_value_type(d);
     tmp.to_big_object();
 
     value_type h { static_cast<value_type>(rhs / BITS) };

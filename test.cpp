@@ -6,10 +6,11 @@ using namespace std;
 
 int main()
 {
-    big_integer a = std::numeric_limits<int>::min();
-    big_integer b = -a;
+    big_integer a = 65536;
+    a *= a;
+    a >>= 31;
     //std::cout << (a + b == -15) << "\n";
-    std::cout << b - 1 << "\n";
+    std::cout << a << "\n";
 
     return 0;
 }
