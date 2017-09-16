@@ -281,7 +281,7 @@ big_integer& big_integer::operator/=(big_integer const& rhs)
     b.to_big_object();
 
     bool sign_ { a.convert_to_signed() != b.convert_to_signed() };
-    
+
     tr_value_type f { BASE / (((b.size() > 1 && b[b.size() - 1] == 0) ?
         b[b.size() - 2] : b[b.size() - 1]) + 1) };
 
@@ -521,7 +521,7 @@ big_integer& big_integer::operator>>=(int rhs)
     //std::cout << ">>=\n";
     value_type d { 1 };
     big_integer tmp { *this };
-
+    bool sign_ { sign() };
     while (rhs % BITS != 0)
     {
         d *= 2;
@@ -545,6 +545,8 @@ big_integer& big_integer::operator>>=(int rhs)
     }
     tmp.reallocate(tmp.size() - h);
     tmp.trim();
+    if (sign_)
+        --tmp;
     swap(tmp);
     return *this;
 }
