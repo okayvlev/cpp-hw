@@ -132,14 +132,17 @@ big_integer& big_integer::operator=(const big_integer& other)
 
 big_integer& big_integer::operator+=(big_integer const& rhs)
 {
-    //std::cout << "+=\n";
     big_integer a { *this };
     big_integer b { rhs };
     a.detach();
     b.detach();
-    //std::cout << "========\n";
+
     if (a.sign() != b.sign())
-        return a -= -b;
+    {
+        big_integer tmp { a - (-b) };
+        swap(tmp);
+        return *this;
+    }
 
     a.to_big_object();
     b.to_big_object();
@@ -173,7 +176,11 @@ big_integer& big_integer::operator-=(big_integer const& rhs)
     b.detach();
 
     if (a.sign() != b.sign())
-        return a += -b;
+    {
+        big_integer tmp { a + (-b) };
+        swap(tmp);
+        return *this;
+    }
 
     a.to_big_object();
     b.to_big_object();
@@ -200,8 +207,10 @@ big_integer& big_integer::operator-=(big_integer const& rhs)
     }
     a.convert_to_2s(carry ^ sign_);
     a.trim();
+    //a.out();
     swap(a);
-
+    //out();
+    //std::cout << "-----------\n";
     return *this;
 }
 
