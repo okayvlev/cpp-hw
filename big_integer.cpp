@@ -313,12 +313,13 @@ big_integer& big_integer::operator/=(big_integer const& rhs)
         if (h.state == SMALL)
             h.to_big_object();
 
-        tr_value_type r2 { h[h.size() - 1] }; // FIXME
+        size_t size_h { (h.size() > 1 && h[h.size() - 1] == 0u) ? h.size() - 1 : h.size() };
+        tr_value_type r2 { h[size_h - 1] }; // FIXME
 
-        if (h.size() > size_d)
+        if (size_h > size_d)
         {
             r2 *= BASE;
-            r2 += h[h.size() - 2];
+            r2 += h[size_h - 2];
         }
 
         tr_value_type qt { std::min(r2 / d1, static_cast<tr_value_type>(BASE - 1)) };
