@@ -10,12 +10,11 @@ int main()
     // big_integer b(                                                     "100000000000000000000000000000000000000");
     // big_integer c("100000000000000000000000000000000000000000000000000000");
 
-    big_integer a { "1024" };
+    big_integer a { 1 };
     big_integer b { 1 };
-    b <<= 32;
-    a *= b;
+    (a + b).out();
 
-    std::cout << a / b << " " << b  << "\n";
+    // std::cout << a / b << " " << b  << "\n";
 
     return 0;
 }

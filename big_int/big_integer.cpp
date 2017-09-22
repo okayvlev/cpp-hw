@@ -99,17 +99,19 @@ big_integer& big_integer::operator+=(big_integer const& rhs)
     }
     detach();
     vector<value_type> ans;
+    const vector<value_type> a { (state == BIG) ? big_number : number };
+    const vector<value_type> b { (state == BIG) ? rhs.big_number : number };
     ans.ensure_capacity(std::max(a.size(), b.size()) + 1);
     tr_value_type carry { };
     for (size_t i = 0; i < ans.size(); ++i)
     {
-        tr_value_type res { carry + big_number[i] };
-        if (i < rhs.size())
-            res += rhs[i];
+        tr_value_type res { carry + a[i] };
+        if (i < b.size())
+            res += b[i];
         carry = res / BASE;
-        big_number[i] = res % BASE;
+        ans[i] = res % BASE;
     }
-    swap(ans, big_number);
+    std::swap(ans, big_number);
     trim();
     return *this;
 }
@@ -127,35 +129,60 @@ big_integer& big_integer::operator-=(big_integer const& rhs)
     }
 
     vector<value_type> ans;
+    const vector<value_type> a { (state == BIG) ? big_number : number };
+    const vector<value_type> b { (state == BIG) ? rhs.big_number : number };
     ans.ensure_capacity(std::max(a.size(), b.size()));
 
     tr_value_type carry = 0;
     for (size_t i = 0; i < ans.size(); ++i)
     {
-        tr_value_type res { static_cast<tr_value_type>(BASE) + big_number[i] - carry };
-        if (i < rhs.size())
-            res -= rhs[i];
+        tr_value_type res { BASE + a[i] - carry };
+        if (i < b.size())
+            res -= b[i];
         if (res < BASE)
             carry = 1;
         else
             carry = 0;
         ans[i] = res % BASE;
     }
-    swap(ans, big_number);
+    std::swap(ans, big_number);
     trim();
     return *this;
+}
+
+void big_integer::multiply(const value_type& rhs)
+{
+    vector<value_type> tmp { (state == BIG) ? big_number : number };
+    tmp.detach();
+    tmp.ensure_capacity(tmp.size() + 1);
+    value_type carry { };
+    for (size_t i = 0; i < tmp.size(); ++i)
+    {
+        tr_value_type res { static_cast<tr_value_type>(rhs) * tmp[i] + carry };
+        tmp[i] = res / BASE;
+        carry = res % BASE;
+    }
+    std::swap(tmp, big_number);
+    trim();
 }
 
 big_integer& big_integer::operator*=(big_integer const& rhs)
 {
     detach();
     sign ^= rhs.sign;
+    if (rhs.state == SMALL)
+    {
+        multiply(rhs.number);
+        return;
+    }
     vector<value_type> ans;
-    ans.ensure_capacity(size() + rhs.size());
-    for (size_t i = 0; i < size(); ++i) {
+    const vector<value_type> a { (state == BIG) ? big_number : number };
+    const vector<value_type> b { (state == BIG) ? rhs.big_number : number };
+    ans.ensure_capacity(a.size() + b.size());
+    for (size_t i = 0; i < a.size(); ++i) {
         tr_value_type carry { };
-        for (size_t j = 0; j < rhs.size(); ++j) {
-            tr_value_type res { static_cast<tr_value_type>(big_number[i]) * rhs[j] + carry };
+        for (size_t j = 0; j < b.size(); ++j) {
+            tr_value_type res { static_cast<tr_value_type>(a[i]) * b[j] + carry };
             carry = res / BASE;
             if (static_cast<tr_value_type>(ans[i + j]) + res % BASE >= BASE)
                 ans[i + j + 1] += 1;
@@ -166,6 +193,21 @@ big_integer& big_integer::operator*=(big_integer const& rhs)
     std::swap(ans, big_number);
     trim();
     return *this;
+}
+
+void big_integer::quotient(const value_type& rhs)
+{
+    vector<value_type> tmp { (state == BIG) ? big_number : number };
+    tmp.detach();
+    tr_value_type carry { };
+    for (size_t i = tmp.size(); i-- > 0;)
+    {
+        tr_value_type res { carry * BASE + tmp[i] };
+        tmp[i] = res / rhs;
+        carry = res % rhs;
+    }
+    std::swap(big_number, tmp);
+    trim();
 }
 
 big_integer& big_integer::operator/=(big_integer const& rhs)
@@ -187,8 +229,7 @@ big_integer& big_integer::operator/=(big_integer const& rhs)
     }
     if (rhs.state == SMALL)
     {
-        big_integer tmp { quotient(rhs.number) };
-        swap(tmp);
+        quotient(rhs.number);
         return *this;
     }
 
@@ -222,7 +263,7 @@ big_integer& big_integer::operator/=(big_integer const& rhs)
             r2 *= BASE;
             r2 += h[h.size() - 2];
         }
-        tr_value_type qt { std::min(r2 / d1, static_cast<tr_value_type>(BASE - 1)) };
+        tr_value_type qt { std::min(r2 / d1, BASE - 1) };
         dq = d * qt;
         while (h < dq)
         {
@@ -350,38 +391,27 @@ big_integer& big_integer::operator^=(big_integer const& rhs)
 
 big_integer& big_integer::operator<<=(int rhs)
 {
-    // //std::cout << "<<=\n";
-    // value_type d { 1 };
-    // big_integer tmp { *this };
-    // bool sign_ { sign() };
-    //
-    // while (rhs % BITS != 0)
-    // {
-    //     d *= 2;
-    //     --rhs;
-    // }
-    //
-    // tmp.detach();
-    // if (d > 1)
-    //     tmp *= from_value_type(d);
-    // tmp.to_big_object();
-    //
-    // int h { rhs / BITS };
-    // tmp.reallocate(tmp.size() + h);
-    // for (int i = tmp.size() - 1; i >= h; --i)
-    // {
-    //     tmp[i] = tmp[i - h];
-    // }
-    // for (int i = 0; i < h; ++i)
-    //     tmp[i] = 0u;
-    // if (sign() != sign_)
-    // {
-    //     tmp.reallocate(tmp.size() + 1);
-    //     if (!sign_)
-    //         tmp.operator[](tmp.size() - 1) = ~0u;
-    // }
-    // tmp.trim();
-    // swap(tmp);
+    //std::cout << "<<=\n";
+    detach();
+    value_type d { 1 };
+    while (rhs % BITS != 0)
+    {
+        d *= 2;
+        --rhs;
+    }
+    if (d > 1)
+        multiply(d);
+    vector<value_type> tmp { (state == BIG) ? big_number : number };
+    int h { rhs / BITS };
+    tmp.ensure_capacity(tmp.size() + h);
+    for (int i = tmp.size() - 1; i >= h; --i)
+    {
+        tmp[i] = tmp[i - h];
+    }
+    for (int i = 0; i < h; ++i)
+        tmp[i] = 0u;
+    std::swap(tmp, big_number);
+    trim();
     return *this;
 }
 
@@ -444,7 +474,7 @@ big_integer big_integer::operator-() const
 big_integer big_integer::operator~() const
 {
     if (state == SMALL)
-        return ~number;
+        return ~number; // TODO is it okay?
     big_integer tmp { *this };
     tmp.detach();
     tmp.convert_to_2s(sign);
