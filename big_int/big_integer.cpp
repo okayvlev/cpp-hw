@@ -20,7 +20,7 @@ void big_integer::quick_copy(const big_integer& other)
     }
 }
 
-big_integer::big_integer(const big_integer& other) : big_integer { }
+big_integer::big_integer(const big_integer& other)
 {
     //std::cout << "copy constructor\n";
     try
@@ -92,8 +92,7 @@ big_integer& big_integer::operator=(const big_integer& other)
     {
         if (&other != this)
         {
-            big_integer tmp { };
-            tmp.quick_copy(other);
+            big_integer tmp { other };
             tmp.swap(*this);
         }
     }
@@ -103,25 +102,12 @@ big_integer& big_integer::operator=(const big_integer& other)
 
 big_integer& big_integer::operator+=(big_integer const& rhs)
 {
-    big_integer a { *this };
-    big_integer b { rhs };
-    a.detach();
-    b.detach();
-
-    if (a.sign() != b.sign())
+    if (sign != rhs.sign)
     {
-        big_integer tmp { a - (-b) };
-        swap(tmp);
-        return *this;
+        return *this -= -rhs;
     }
 
-    a.to_big_object();
-    b.to_big_object();
-
-    bool sign_ { a.convert_to_signed() }; // equal signs
-
-    b.convert_to_signed();
-    a.reallocate(std::max(a.size(), b.size()) + 1);
+    vector<value_type> ans;
     tr_value_type carry = 0;
     for (size_t i = 0; i < a.size(); ++i)
     {
@@ -349,190 +335,190 @@ big_integer& big_integer::operator/=(big_integer const& rhs)
 
 big_integer& big_integer::operator%=(big_integer const& rhs)
 {
-    return *this = *this - (*this / rhs) * rhs;
+    return *this -= (*this / rhs) * rhs;
 }
 
 big_integer& big_integer::operator&=(big_integer const& rhs)
 {
-    big_integer tmp { };
-
-    if (state == rhs.state && rhs.state == SMALL)
-    {
-        tmp.number = number & rhs.number;
-        swap(tmp);
-        return *this;
-    }
-    big_integer a { *this };
-    big_integer b { rhs };
-    a.detach();
-    b.detach();
-    if (a.state == SMALL)
-        a.to_big_object();
-    if (b.state == SMALL)
-        b.to_big_object();
-
-    tmp.to_big_object();
-    tmp.reallocate(std::max(a.size(), b.size()));
-
-    const value_type zero_a { a.sign() ? ~0u : 0u };
-    const value_type zero_b { b.sign() ? ~0u : 0u };
-
-    for (size_t i = 0; i < tmp.size(); ++i)
-    {
-        value_type x { i < a.size() ? a[i] : zero_a };
-        value_type y { i < b.size() ? b[i] : zero_b };
-        tmp[i] = x & y;
-    }
-    tmp.trim();
-    swap(tmp);
+    // big_integer tmp { };
+    //
+    // if (state == rhs.state && rhs.state == SMALL)
+    // {
+    //     tmp.number = number & rhs.number;
+    //     swap(tmp);
+    //     return *this;
+    // }
+    // big_integer a { *this };
+    // big_integer b { rhs };
+    // a.detach();
+    // b.detach();
+    // if (a.state == SMALL)
+    //     a.to_big_object();
+    // if (b.state == SMALL)
+    //     b.to_big_object();
+    //
+    // tmp.to_big_object();
+    // tmp.reallocate(std::max(a.size(), b.size()));
+    //
+    // const value_type zero_a { a.sign() ? ~0u : 0u };
+    // const value_type zero_b { b.sign() ? ~0u : 0u };
+    //
+    // for (size_t i = 0; i < tmp.size(); ++i)
+    // {
+    //     value_type x { i < a.size() ? a[i] : zero_a };
+    //     value_type y { i < b.size() ? b[i] : zero_b };
+    //     tmp[i] = x & y;
+    // }
+    // tmp.trim();
+    // swap(tmp);
     return *this;
 }
 
 big_integer& big_integer::operator|=(big_integer const& rhs)
 {
-    big_integer tmp { };
-
-    if (state == rhs.state && rhs.state == SMALL)
-    {
-        tmp.number = number | rhs.number;
-        swap(tmp);
-        return *this;
-    }
-    big_integer a { *this };
-    big_integer b { rhs };
-    a.detach();
-    b.detach();
-    if (a.state == SMALL)
-        a.to_big_object();
-    if (b.state == SMALL)
-        b.to_big_object();
-
-    tmp.to_big_object();
-    tmp.reallocate(std::max(a.size(), b.size()));
-
-    const value_type zero_a { a.sign() ? ~0u : 0u };
-    const value_type zero_b { b.sign() ? ~0u : 0u };
-
-    for (size_t i = 0; i < tmp.size(); ++i)
-    {
-        value_type x { i < a.size() ? a[i] : zero_a };
-        value_type y { i < b.size() ? b[i] : zero_b };
-        tmp[i] = x | y;
-    }
-    tmp.trim();
-    swap(tmp);
+    // big_integer tmp { };
+    //
+    // if (state == rhs.state && rhs.state == SMALL)
+    // {
+    //     tmp.number = number | rhs.number;
+    //     swap(tmp);
+    //     return *this;
+    // }
+    // big_integer a { *this };
+    // big_integer b { rhs };
+    // a.detach();
+    // b.detach();
+    // if (a.state == SMALL)
+    //     a.to_big_object();
+    // if (b.state == SMALL)
+    //     b.to_big_object();
+    //
+    // tmp.to_big_object();
+    // tmp.reallocate(std::max(a.size(), b.size()));
+    //
+    // const value_type zero_a { a.sign() ? ~0u : 0u };
+    // const value_type zero_b { b.sign() ? ~0u : 0u };
+    //
+    // for (size_t i = 0; i < tmp.size(); ++i)
+    // {
+    //     value_type x { i < a.size() ? a[i] : zero_a };
+    //     value_type y { i < b.size() ? b[i] : zero_b };
+    //     tmp[i] = x | y;
+    // }
+    // tmp.trim();
+    // swap(tmp);
     return *this;
 }
 
 big_integer& big_integer::operator^=(big_integer const& rhs)
 {
-    big_integer tmp { };
-
-    if (state == rhs.state && rhs.state == SMALL)
-    {
-        tmp.number = number ^ rhs.number;
-        swap(tmp);
-        return *this;
-    }
-    big_integer a { *this };
-    big_integer b { rhs };
-    a.detach();
-    b.detach();
-    a.to_big_object();
-    b.to_big_object();
-
-    tmp.to_big_object();
-    tmp.reallocate(std::max(a.size(), b.size()));
-
-    const value_type zero_a { a.sign() ? ~0u : 0u };
-    const value_type zero_b { b.sign() ? ~0u : 0u };
-
-    for (size_t i = 0; i < tmp.size(); ++i)
-    {
-        value_type x { i < a.size() ? a[i] : zero_a };
-        value_type y { i < b.size() ? b[i] : zero_b };
-        tmp[i] = x ^ y;
-    }
-    tmp.trim();
-    swap(tmp);
+    // big_integer tmp { };
+    //
+    // if (state == rhs.state && rhs.state == SMALL)
+    // {
+    //     tmp.number = number ^ rhs.number;
+    //     swap(tmp);
+    //     return *this;
+    // }
+    // big_integer a { *this };
+    // big_integer b { rhs };
+    // a.detach();
+    // b.detach();
+    // a.to_big_object();
+    // b.to_big_object();
+    //
+    // tmp.to_big_object();
+    // tmp.reallocate(std::max(a.size(), b.size()));
+    //
+    // const value_type zero_a { a.sign() ? ~0u : 0u };
+    // const value_type zero_b { b.sign() ? ~0u : 0u };
+    //
+    // for (size_t i = 0; i < tmp.size(); ++i)
+    // {
+    //     value_type x { i < a.size() ? a[i] : zero_a };
+    //     value_type y { i < b.size() ? b[i] : zero_b };
+    //     tmp[i] = x ^ y;
+    // }
+    // tmp.trim();
+    // swap(tmp);
     return *this;
 }
 // FIXME add trim everywhere
 big_integer& big_integer::operator<<=(int rhs)
 {
-    //std::cout << "<<=\n";
-    value_type d { 1 };
-    big_integer tmp { *this };
-    bool sign_ { sign() };
-
-    while (rhs % BITS != 0)
-    {
-        d *= 2;
-        --rhs;
-    }
-
-    tmp.detach();
-    if (d > 1)
-        tmp *= from_value_type(d);
-    tmp.to_big_object();
-
-    int h { rhs / BITS };
-    tmp.reallocate(tmp.size() + h);
-    for (int i = tmp.size() - 1; i >= h; --i)
-    {
-        tmp[i] = tmp[i - h];
-    }
-    for (int i = 0; i < h; ++i)
-        tmp[i] = 0u;
-    if (sign() != sign_)
-    {
-        tmp.reallocate(tmp.size() + 1);
-        if (!sign_)
-            tmp.operator[](tmp.size() - 1) = ~0u;
-    }
-    tmp.trim();
-    swap(tmp);
+    // //std::cout << "<<=\n";
+    // value_type d { 1 };
+    // big_integer tmp { *this };
+    // bool sign_ { sign() };
+    //
+    // while (rhs % BITS != 0)
+    // {
+    //     d *= 2;
+    //     --rhs;
+    // }
+    //
+    // tmp.detach();
+    // if (d > 1)
+    //     tmp *= from_value_type(d);
+    // tmp.to_big_object();
+    //
+    // int h { rhs / BITS };
+    // tmp.reallocate(tmp.size() + h);
+    // for (int i = tmp.size() - 1; i >= h; --i)
+    // {
+    //     tmp[i] = tmp[i - h];
+    // }
+    // for (int i = 0; i < h; ++i)
+    //     tmp[i] = 0u;
+    // if (sign() != sign_)
+    // {
+    //     tmp.reallocate(tmp.size() + 1);
+    //     if (!sign_)
+    //         tmp.operator[](tmp.size() - 1) = ~0u;
+    // }
+    // tmp.trim();
+    // swap(tmp);
     return *this;
 }
 
 big_integer& big_integer::operator>>=(int rhs)
 {
-    //std::cout << ">>=\n";
-    value_type d { 1 };
-    big_integer tmp { *this };
-    bool sign_ { sign() };
-    while (rhs % BITS != 0)
-    {
-        d *= 2;
-        --rhs;
-    }
-    tmp.detach();
-    tmp /= from_value_type(d);
-    tmp.to_big_object();
-
-    value_type h { static_cast<value_type>(rhs / BITS) };
-
-    if (h >= tmp.size())
-    {
-        big_integer tmp { };
-        swap(tmp);
-        return *this;
-    }
-    for (size_t i = 0; i < tmp.size() - h; ++i) // TODO get rid of misuse of value_type
-    {
-        tmp[i] = tmp[i + h];
-    }
-    tmp.reallocate(tmp.size() - h);
-    tmp.trim();
-    if (sign_)
-        --tmp;
-    if (sign() != sign_)
-    {
-        tmp.reallocate(tmp.size() + 1);
-        if (!sign_)
-            tmp.operator[](tmp.size() - 1) = ~0u;
-    }
-    swap(tmp);
+    // //std::cout << ">>=\n";
+    // value_type d { 1 };
+    // big_integer tmp { *this };
+    // bool sign_ { sign() };
+    // while (rhs % BITS != 0)
+    // {
+    //     d *= 2;
+    //     --rhs;
+    // }
+    // tmp.detach();
+    // tmp /= from_value_type(d);
+    // tmp.to_big_object();
+    //
+    // value_type h { static_cast<value_type>(rhs / BITS) };
+    //
+    // if (h >= tmp.size())
+    // {
+    //     big_integer tmp { };
+    //     swap(tmp);
+    //     return *this;
+    // }
+    // for (size_t i = 0; i < tmp.size() - h; ++i) // TODO get rid of misuse of value_type
+    // {
+    //     tmp[i] = tmp[i + h];
+    // }
+    // tmp.reallocate(tmp.size() - h);
+    // tmp.trim();
+    // if (sign_)
+    //     --tmp;
+    // if (sign() != sign_)
+    // {
+    //     tmp.reallocate(tmp.size() + 1);
+    //     if (!sign_)
+    //         tmp.operator[](tmp.size() - 1) = ~0u;
+    // }
+    // swap(tmp);
     return *this;
 }
 
@@ -547,33 +533,19 @@ big_integer big_integer::operator-() const
         return *this;
 
     big_integer tmp { *this };
-    tmp.detach();
-    tmp.to_big_object();
-    bool sign_ { tmp.sign() };
-    tmp.simple_conversion();
-    if (tmp.sign() == sign_)
-    {
-        tmp.reallocate(tmp.size() + 1);
-        if (!sign_)
-            tmp.operator[](tmp.size() - 1) = ~0u;
-    }
-    tmp.trim();
-
+    tmp.sign ^= 1;
     return tmp;
-}
-
-void big_integer::reverse_bytes()
-{
-    for (size_t i = 0; i < size(); ++i)
-        array[i] = ~array[i];
 }
 
 big_integer big_integer::operator~() const
 {
-    if (state == SMALL) return ~number;
+    if (state == SMALL)
+        return ~number;
     big_integer tmp { *this };
     tmp.detach();
+    tmp.convert_to_2s(sign);
     tmp.reverse_bytes();
+    tmp.sign = tmp.convert_to_signed();
     tmp.trim();
     return tmp;
 }
@@ -656,12 +628,13 @@ big_integer operator>>(big_integer a, int b)
 
 bool operator==(big_integer const& a, big_integer const& b) // TODO compare pointers
 {
-    if (a.state != b.state)
+    if (a.state != b.state || a.sign != b.sign)
         return false;
     if (a.state == big_integer::SMALL)
         return a.number == b.number;
     if (a.size() != b.size())
         return false;
+
     for (size_t i = 0; i < a.size(); ++i)
         if (a[i] != b[i])
             return false;
@@ -680,33 +653,30 @@ bool operator<(big_integer const& a, big_integer const& b)
 
 bool operator>(big_integer const& a, big_integer const& b)
 {
-    if (a.state == big_integer::SMALL && b.state == big_integer::SMALL) return a.number > b.number;
-    big_integer x { a };
-    big_integer y { b };
-    x.detach();
-    y.detach();
-    if (x.state == big_integer::SMALL)
-        x.to_big_object();
-    if (y.state == big_integer::SMALL)
-        y.to_big_object();
-    bool sign_a { x.convert_to_signed() };
-    bool sign_b { y.convert_to_signed() };
-
-    if (!sign_a && sign_b) return true;
-    if (sign_a && !sign_b) return false;
-    if (sign_a && sign_b)
+    if (!a.sign && b.sign)
+        return true;
+    if (a.sign && !b.sign)
+        return false;
+    if (a.sign && b.sign)
+        return a < b;
+    // Only positive pass
+    if (a.state == big_integer::SMALL && b.state == big_integer::SMALL)
+        return a.number > b.number;
+    if (a.state == big_integer::BIG && b.state == big_integer::SMALL)
+        return true;
+    if (a.state == big_integer::SMALL && b.state == big_integer::BIG)
+        return false;
+    // Only big pass
+    if (a.size() > b.size())
+        return true;
+    if (b.size() > a.size())
+        return false;
+    for (int i = a.size() - 1; i >= 0; --i)
     {
-        x.convert_to_2s(0);
-        y.convert_to_2s(0);
-        return x < y;
-    }
-
-    if (x.size() > y.size()) return true;
-    if (y.size() > x.size()) return false;
-    for (int i = x.size() - 1; i >= 0; --i)
-    {
-        if (x[i] > y[i]) return true;
-        if (x[i] < y[i]) return false;
+        if (a[i] > b[i])
+            return true;
+        if (a[i] < b[i])
+            return false;
     }
     return false;
 }
@@ -723,28 +693,19 @@ bool operator>=(big_integer const& a, big_integer const& b)
 
 std::string to_string(big_integer const& a)
 {
-    if (a == 0)
-    {
-        return "0";
-    }
     big_integer tmp { a };
     std::string str { };
     tmp.detach();
-    tmp.to_big_object();
 
-    bool sign_ = tmp.convert_to_signed();
-    tmp.convert_to_2s(0);
-
-    while (tmp > 0)
+    while (tmp != 0)
     {
         //(tmp % 10).out();
         str += static_cast<char>('0' + (tmp % 10).number);
         tmp /= 10;
     }
-    if (sign_)
+    if (a.sign)
         str += '-';
     std::reverse(str.begin(), str.end());
-
     return str;
 }
 
@@ -753,112 +714,53 @@ std::ostream& operator<<(std::ostream& s, big_integer const& a)
     return s << to_string(a);
 }
 
-void big_integer::to_big_object()
-{
-    if (state == BIG) return;
-    long long number_ { number };
-
-    state = BIG;
-    array = new value_type[3] + 2;  // shift for optimizing operator[] call
-    //std::cout << "to big:" << array << std::endl;
-    size() = 1;
-    ref_count() = 0;
-    operator[](0) = number_ >= 0 ? number_ : -number_;
-    convert_to_2s(number_ < 0);
-}
-
 void big_integer::detach()
 {
     //std::cout << "detach\n";
-    if (state == SMALL || ref_count() == 0) return;
-    --ref_count();
-    value_type* new_array { new value_type[size() + 2] + 2 };
-    //std::cout << "detach:" << new_array << " from:" << array << "\n";
-    memcpy(new_array - 1, array - 1, sizeof(value_type) * (size() + 1));
-    std::swap(new_array, array);
-    ref_count() = 0;
-    //delete[](new_array - 2);
+    if (state == SMALL) return;
+    big_number.detach();
 }
 
 bool big_integer::convert_to_signed()
 {
     //std::cout << "convert\n";
-    if (!sign())
-        return 0;
-
-    bool sign_ { sign() };
-
+    if (!get_sign())
+        return false;
     simple_conversion();
-
-    return sign_;
+    return true;
 }
 
 void big_integer::convert_to_2s(bool sign)
 {
     //std::cout << "convert to 2s\n";
-    if (!sign)
-    {
-        if (sign != this->sign())
-        {
-            reallocate(size() + 1);
-        }
-        return;
-    }
-    simple_conversion();
+    assert(state == BIG);
+    if (sign)
+        simple_conversion();
+    if (get_sign())
+        ensure_capacity(big_number.size() + 1); // Adding 0 at the beginning to not confuse with negative
 }
 
 void big_integer::simple_conversion()
 {
-    detach();
-    reverse_bytes();
-
-    bool carry { ++operator[](0) == 0u };
-    for (size_t i = 1; i < size(); ++i)
-    {
-        if (!carry)
-            break;
-        if (++operator[](i) != 0u) // no overflow
-            carry = 0;
-    }
-    if (carry)
-    {
-        reallocate(size() + 1);
-        operator[](size() - 1) = 1;
-    }
-}
-
-void big_integer::reallocate(value_type new_size)
-{
-    if (state == SMALL || size() == new_size) return;
-    detach();
-    new_size += 2;
-    value_type* new_arr = new value_type[new_size] { };
-    //std::cout << "reallocate:" << new_arr + 2 << " from:" << array << std::endl;
-    memcpy(new_arr, array - 2, std::min(size() + 2, new_size) * sizeof(value_type));
-    //std::cout << "deleting at " << array << "\n";
-    delete[](array - 2);
-    array = new_arr + 2;
-    size() = new_size - 2;
+    for (size_t i = 0; i < size(); ++i)
+        big_number[i] = ~big_number[i];
+    operator++();
 }
 
 void big_integer::trim()
 {
-    if (state == SMALL)
+    if (state == BIG)
     {
-        if (number == 0)
-            sign = 0;
-        return;
+        big_number.shrink_to_fit();
+        if (big_number.size() > 1)
+            return;
+        big_integer tmp { *this };
+        tmp.state = SMALL;
+        tmp.number = big_number[0];
+        swap(tmp);
     }
-    big_number.shrink_to_fit();
-    if (big_number.size() == 1)
-    {
-        value_type number_ { big_number[0] };
-        big_number.~vector();
-        number = number_;
-        state = SMALL;
-        if (number == 0)
-            sign = 0;
-    }
+    if (number == 0u)
+        sign = 0;
 }
 
 void big_integer::out() const

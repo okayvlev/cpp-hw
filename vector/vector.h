@@ -7,6 +7,7 @@ struct vector
     using value_type = T;
 
     vector();
+    vector(value_type)
     vector(const vector&);
     vector(vector&&);
     ~vector();
@@ -39,6 +40,15 @@ vector<T>::vector()
 {
     allocate(0);   // This will also zero-initialize size and sign
     ref_count() = 1;
+}
+
+template <typename T>
+vector<T>::vector(value_type e)
+{
+    allocate(1);   // This will also zero-initialize sign
+    size() = 1;
+    ref_count() = 1;
+    array[0] = e;
 }
 
 template <typename T>
@@ -96,6 +106,8 @@ void vector<T>::quick_allocate(size_t new_size)
 template <typename T>
 void vector<T>::detach()
 {
+    if (ref_count() == 1)
+        return;
     --ref_count();
     value_type* old_array { array };
     size_t size_ { size() };
@@ -117,6 +129,7 @@ void vector<T>::shrink_to_fit()
     quick_allocate(size_);
     memcpy(array - OFFSET, old_array - OFFSET, size_ + OFFSET);
     delete[](old_array - OFFSET);
+    size() = size_;
 }
 
 template <typename T>
@@ -130,6 +143,7 @@ void vector<T>::ensure_capacity(size_t new_size)
     allocate(new_size);
     memcpy(array - OFFSET, old_array - OFFSET, size_ + OFFSET);
     delete[](old_array - OFFSET);
+    size() = size_;
 }
 
 template <typename T>
