@@ -1,6 +1,8 @@
 #ifndef BIG_INTEGER_H
 #define BIG_INTEGER_H
 
+#include "vector/vector.h"
+
 struct big_integer
 {
     using value_type = uint32_t;
@@ -17,7 +19,9 @@ struct big_integer
     big_integer& operator+=(big_integer const& rhs);
     big_integer& operator-=(big_integer const& rhs);
     big_integer& operator*=(big_integer const& rhs);
+    void multiply(const value_type& rhs);
     big_integer& operator/=(big_integer const& rhs);
+    void quotient(const value_type& rhs);
     big_integer& operator%=(big_integer const& rhs);
 
     big_integer& operator&=(big_integer const& rhs);
@@ -63,7 +67,9 @@ private:
     bool sign { };  // Storing sign as value_type in array is memory overhead, whereas storing
                     // the number in two's complement form adding unwanted complexity to the code
 
-    const value_type& size() { return big_number.size() };
+    const value_type& size() const { return big_number.size(); };
+    value_type& operator[](size_t n) { return big_number[n]; };
+    const value_type& operator[](size_t n) const { return big_number[n]; };
     void detach();
     void swap(big_integer& tmp);
     void quick_copy(const big_integer& other);
@@ -71,7 +77,9 @@ private:
     bool convert_to_signed();
     void convert_to_2s(bool sign);
     void simple_conversion();
+    void reverse_bytes();
     void trim();
+    big_integer from_value_type(value_type t) const;
 };
 
 big_integer operator+(big_integer a, big_integer const& b);

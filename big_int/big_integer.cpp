@@ -34,7 +34,7 @@ big_integer::big_integer(int a)
     number = sign ? -a : a;
 }
 
-big_integer big_integer::from_value_type(value_type t)
+big_integer big_integer::from_value_type(value_type t) const
 {
     big_integer tmp { };
     tmp.number = t;
@@ -173,7 +173,7 @@ big_integer& big_integer::operator*=(big_integer const& rhs)
     if (rhs.state == SMALL)
     {
         multiply(rhs.number);
-        return;
+        return *this;
     }
     vector<value_type> ans;
     const vector<value_type> a { (state == BIG) ? big_number : number };
@@ -221,7 +221,7 @@ big_integer& big_integer::operator/=(big_integer const& rhs)
         trim();
         return *this;
     }
-    if (state == SMALL && rhs.state == BIG || *this < rhs)
+    if ((state == SMALL && rhs.state == BIG) || *this < rhs)
     {
         number = 0;
         trim();
@@ -671,13 +671,18 @@ void big_integer::convert_to_2s(bool sign)
     if (sign)
         simple_conversion();
     if (get_sign())
-        ensure_capacity(size() + 1); // Adding 0 at the beginning to not confuse with negative
+        big_number.ensure_capacity(size() + 1); // Adding 0 at the beginning to not confuse with negative
+}
+
+void big_integer::reverse_bytes()
+{
+    for (size_t i = 0; i < size(); ++i)
+        big_number[i] = ~big_number[i];
 }
 
 void big_integer::simple_conversion()
 {
-    for (size_t i = 0; i < size(); ++i)
-        big_number[i] = ~big_number[i];
+    reverse_bytes();
     operator++();
 }
 

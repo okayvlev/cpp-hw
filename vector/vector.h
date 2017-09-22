@@ -1,13 +1,15 @@
 #ifndef VECTOR_H
 #define VECTOR_H
 
+#include <cassert>
+
 template<typename T>
 struct vector
 {
     using value_type = T;
 
     vector();
-    vector(value_type)
+    vector(value_type);
     vector(const vector&);
     vector(vector&&);
     ~vector();
@@ -29,9 +31,10 @@ struct vector
 
 private:
     value_type* array;
-    static constexpr OFFSET { 2 };
+    static constexpr size_t OFFSET { 2 };
 
     void allocate(size_t new_size);
+    void quick_allocate(size_t new_size);
     void quick_copy(const vector& other);
 };
 
@@ -59,13 +62,13 @@ void vector<T>::quick_copy(const vector& other)
 }
 
 template <typename T>
-vector<T>::vector<T>(const vector& other)
+vector<T>::vector(const vector& other)
 {
     quick_copy(other);
 }
 
 template <typename T>
-vector<T>::vector<T>(vector&& other)
+vector<T>::vector(vector&& other)
 {
     array = other.array;
 }
@@ -74,12 +77,14 @@ template <typename T>
 vector<T>& vector<T>::operator=(const vector& other)
 {
     quick_copy(other);
+    return *this;
 }
 
 template <typename T>
 vector<T>& vector<T>::operator=(vector&& other)
 {
     array = other.array;
+    return *this;
 }
 
 template <typename T>
@@ -147,7 +152,7 @@ void vector<T>::ensure_capacity(size_t new_size)
 }
 
 template <typename T>
-void vector<T>::out()
+void vector<T>::out() const
 {
     std::cout << '[' << ref_count() << ", " << size() << "]: ";
     for (size_t i = 0; i < size(); ++i)
