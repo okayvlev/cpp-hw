@@ -63,6 +63,7 @@ private:
     bool sign { };  // Storing sign as value_type in array is memory overhead, whereas storing
                     // the number in two's complement form adding unwanted complexity to the code
 
+    const value_type& size() { return big_number.size() };
     void detach();
     void swap(big_integer& tmp);
     void quick_copy(const big_integer& other);
