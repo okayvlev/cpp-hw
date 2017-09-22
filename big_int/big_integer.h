@@ -46,7 +46,6 @@ struct big_integer
 
     friend std::string to_string(big_integer const& a);
     void out() const;
-    void test();
 
 private:
     static constexpr int BITS { 32 }; // TODO
@@ -58,18 +57,11 @@ private:
     } state;
     union
     {
-        long long number;
-        value_type* array;
-    } representation;   // the code would be nicer if the union was in placement,
-                        // but the variable is needed for swap function alone
-
-    value_type& operator[](size_t n) { return representation.array[n]; }
-    value_type& ref_count() { return representation.array[-2]; }
-    value_type& size() { return representation.array[-1]; }
-    const value_type& operator[](size_t n) const { return representation.array[n]; }
-    const value_type& ref_count() const { return representation.array[-2]; }
-    const value_type& size() const { return representation.array[-1]; }
-    bool sign() const { return state == BIG ? representation.array[size() - 1] >> (BITS - 1) : representation.number < 0; }
+        value_type number;
+        vector<value_type> big_number;
+    };
+    bool sign { };  // Storing sign as value_type in array is memory overhead, whereas storing
+                    // the number in two's complement form adding unwanted complexity to the code
 
     void to_big_object();
     void detach();
@@ -81,7 +73,6 @@ private:
     void simple_conversion();
     void trim();
     void reallocate(value_type new_size);
-    big_integer from_value_type(value_type t);
 };
 
 big_integer operator+(big_integer a, big_integer const& b);

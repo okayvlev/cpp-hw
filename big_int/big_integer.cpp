@@ -11,13 +11,12 @@ void big_integer::quick_copy(const big_integer& other)
     if (other.state == SMALL)
     {
         state = SMALL;
-        representation.number = other.representation.number;
+        number = other.number;
     }
     else
     {
         state = BIG;
-        representation.array = other.representation.array;
-        ++other.representation.array[-2];  // accessing ref_count
+        big_number = other.big_number;
     }
 }
 
@@ -37,16 +36,10 @@ big_integer::big_integer(int a)
     try // FIXME understand try policy
     {
         state = SMALL;
-        representation.number = a;
+        sign = a < 0;
+        number = sign ? -a : a;
     }
     catch (...) { /* reporting error */ };
-}
-
-big_integer big_integer::from_value_type(value_type t)
-{
-    big_integer tmp { };
-    tmp.representation.number = t;
-    return tmp;
 }
 
 big_integer::big_integer(std::string const& str) : big_integer { }
@@ -77,54 +70,32 @@ big_integer::~big_integer()
 {
     //std::cout << "destructor\n";
     if (state == BIG)
-    {
-        //std::cout << representation.array << std::endl;
-        if (ref_count() != 0)
-        {
-            detach();
-        }
-        //std::cout << "deleting at " << representation.array << "\n";
-        delete[](representation.array - 2);
-    }
+        big_number.~vector();
 }
 
-void big_integer::swap(big_integer& tmp)
+void big_integer::swap(big_integer& other)
 {
     //std::cout << "swap\n";
-    if (state == BIG && tmp.state == BIG)
-    {
-        std::swap(representation.array, tmp.representation.array);
-    }
-    else if (state == SMALL && tmp.state == SMALL)
-    {
-        std::swap(representation.number, tmp.representation.number);
-    }
-    else if (state == SMALL && tmp.state == BIG)
-    {
-        value_type* ptr { tmp.representation.array };
-        tmp.representation.number = representation.number;
-        representation.array = ptr;
-    }
-    else if (state == BIG && tmp.state == SMALL)
-    {
-        value_type* ptr { representation.array };
-        representation.number = tmp.representation.number;
-        tmp.representation.array = ptr;
-    }
-    //std::swap(representation, tmp.representation); TODO
-    std::swap(state, tmp.state);
+    // Union must be fully swapped, therefore the largest member of union should be chosen
+    if (sizeof(value_type) >= sizeof(vector<value_type>))   // Relying on a comiler to optimize this constexpr at compile time
+        std::swap(number, other.number);
+    else
+        std::swap(big_number, other.big_number);
+    std::swap(sign, other.sign);
+    std::swap(state, other.state);
 }
 
 big_integer& big_integer::operator=(const big_integer& other)
 {
-    if (&other == this)
-        return *this;
     //std::cout << "=\n";
     try
     {
-        big_integer tmp { };
-        tmp.swap(*this);
-        quick_copy(other);
+        if (&other != this)
+        {
+            big_integer tmp { };
+            tmp.quick_copy(other);
+            tmp.swap(*this);
+        }
     }
     catch (...) { /* reporting error */ };
     return *this;
@@ -225,11 +196,10 @@ big_integer& big_integer::operator*=(big_integer const& rhs)
 {
     big_integer a { *this };
     big_integer b { rhs };
-
-    if (a.state == SMALL)
-        a.to_big_object();
-    if (b.state == SMALL)
-        b.to_big_object();
+    a.out();
+    b.out();
+    a.to_big_object();
+    b.to_big_object();
     a.detach();
     b.detach();
     bool sign_ { a.convert_to_signed() != b.convert_to_signed() };
@@ -267,7 +237,7 @@ big_integer& big_integer::operator/=(big_integer const& rhs)
 
     if (a.state == SMALL && b.state == SMALL)
     {
-        tmp.representation.number = a.representation.number / b.representation.number;
+        tmp.number = a.number / b.number;
         swap(tmp);
         return *this;
     }
@@ -284,7 +254,6 @@ big_integer& big_integer::operator/=(big_integer const& rhs)
 
     tr_value_type f { BASE / (((b.size() > 1 && b[b.size() - 1] == 0) ?
         b[b.size() - 2] : b[b.size() - 1]) + 1) };
-
     a.convert_to_2s(0);
     b.convert_to_2s(0);
     if (a < b)
@@ -347,13 +316,16 @@ big_integer& big_integer::operator/=(big_integer const& rhs)
         }
 
         tr_value_type qt { std::min(r2 / d1, static_cast<tr_value_type>(BASE - 1)) };
-
+        std::cout << "======\n";
         dq = d * qt;
-        //std::cout << qt << "qt\n";
-        //std::cout << "dq: ";
-        //dq.out();
-        //std::cout << "d: ";
-        //d.out();
+        std::cout << "======\n";
+        std::cout << "h: ";
+        h.out();
+        std::cout << qt << "qt\n";
+        std::cout << "dq: ";
+        dq.out();
+        std::cout << "d: ";
+        d.out();
 
         while (h < dq) {
             qt--;
@@ -386,7 +358,7 @@ big_integer& big_integer::operator&=(big_integer const& rhs)
 
     if (state == rhs.state && rhs.state == SMALL)
     {
-        tmp.representation.number = representation.number & rhs.representation.number;
+        tmp.number = number & rhs.number;
         swap(tmp);
         return *this;
     }
@@ -422,7 +394,7 @@ big_integer& big_integer::operator|=(big_integer const& rhs)
 
     if (state == rhs.state && rhs.state == SMALL)
     {
-        tmp.representation.number = representation.number | rhs.representation.number;
+        tmp.number = number | rhs.number;
         swap(tmp);
         return *this;
     }
@@ -458,7 +430,7 @@ big_integer& big_integer::operator^=(big_integer const& rhs)
 
     if (state == rhs.state && rhs.state == SMALL)
     {
-        tmp.representation.number = representation.number ^ rhs.representation.number;
+        tmp.number = number ^ rhs.number;
         swap(tmp);
         return *this;
     }
@@ -491,6 +463,7 @@ big_integer& big_integer::operator<<=(int rhs)
     //std::cout << "<<=\n";
     value_type d { 1 };
     big_integer tmp { *this };
+    bool sign_ { sign() };
 
     while (rhs % BITS != 0)
     {
@@ -511,6 +484,12 @@ big_integer& big_integer::operator<<=(int rhs)
     }
     for (int i = 0; i < h; ++i)
         tmp[i] = 0u;
+    if (sign() != sign_)
+    {
+        tmp.reallocate(tmp.size() + 1);
+        if (!sign_)
+            tmp.operator[](tmp.size() - 1) = ~0u;
+    }
     tmp.trim();
     swap(tmp);
     return *this;
@@ -547,6 +526,12 @@ big_integer& big_integer::operator>>=(int rhs)
     tmp.trim();
     if (sign_)
         --tmp;
+    if (sign() != sign_)
+    {
+        tmp.reallocate(tmp.size() + 1);
+        if (!sign_)
+            tmp.operator[](tmp.size() - 1) = ~0u;
+    }
     swap(tmp);
     return *this;
 }
@@ -580,12 +565,12 @@ big_integer big_integer::operator-() const
 void big_integer::reverse_bytes()
 {
     for (size_t i = 0; i < size(); ++i)
-        representation.array[i] = ~representation.array[i];
+        array[i] = ~array[i];
 }
 
 big_integer big_integer::operator~() const
 {
-    if (state == SMALL) return ~representation.number;
+    if (state == SMALL) return ~number;
     big_integer tmp { *this };
     tmp.detach();
     tmp.reverse_bytes();
@@ -674,7 +659,7 @@ bool operator==(big_integer const& a, big_integer const& b) // TODO compare poin
     if (a.state != b.state)
         return false;
     if (a.state == big_integer::SMALL)
-        return a.representation.number == b.representation.number;
+        return a.number == b.number;
     if (a.size() != b.size())
         return false;
     for (size_t i = 0; i < a.size(); ++i)
@@ -695,7 +680,7 @@ bool operator<(big_integer const& a, big_integer const& b)
 
 bool operator>(big_integer const& a, big_integer const& b)
 {
-    if (a.state == big_integer::SMALL && b.state == big_integer::SMALL) return a.representation.number > b.representation.number;
+    if (a.state == big_integer::SMALL && b.state == big_integer::SMALL) return a.number > b.number;
     big_integer x { a };
     big_integer y { b };
     x.detach();
@@ -752,7 +737,8 @@ std::string to_string(big_integer const& a)
 
     while (tmp > 0)
     {
-        str += static_cast<char>('0' + (tmp % 10).representation.number);
+        //(tmp % 10).out();
+        str += static_cast<char>('0' + (tmp % 10).number);
         tmp /= 10;
     }
     if (sign_)
@@ -770,11 +756,11 @@ std::ostream& operator<<(std::ostream& s, big_integer const& a)
 void big_integer::to_big_object()
 {
     if (state == BIG) return;
-    long long number_ { representation.number };
+    long long number_ { number };
 
     state = BIG;
-    representation.array = new value_type[3] + 2;  // shift for optimizing operator[] call
-    //std::cout << "to big:" << representation.array << std::endl;
+    array = new value_type[3] + 2;  // shift for optimizing operator[] call
+    //std::cout << "to big:" << array << std::endl;
     size() = 1;
     ref_count() = 0;
     operator[](0) = number_ >= 0 ? number_ : -number_;
@@ -787,9 +773,9 @@ void big_integer::detach()
     if (state == SMALL || ref_count() == 0) return;
     --ref_count();
     value_type* new_array { new value_type[size() + 2] + 2 };
-    //std::cout << "detach:" << new_array << " from:" << representation.array << "\n";
-    memcpy(new_array - 1, representation.array - 1, sizeof(value_type) * (size() + 1));
-    std::swap(new_array, representation.array);
+    //std::cout << "detach:" << new_array << " from:" << array << "\n";
+    memcpy(new_array - 1, array - 1, sizeof(value_type) * (size() + 1));
+    std::swap(new_array, array);
     ref_count() = 0;
     //delete[](new_array - 2);
 }
@@ -847,37 +833,31 @@ void big_integer::reallocate(value_type new_size)
     detach();
     new_size += 2;
     value_type* new_arr = new value_type[new_size] { };
-    //std::cout << "reallocate:" << new_arr + 2 << " from:" << representation.array << std::endl;
-    memcpy(new_arr, representation.array - 2, std::min(size() + 2, new_size) * sizeof(value_type));
-    //std::cout << "deleting at " << representation.array << "\n";
-    delete[](representation.array - 2);
-    representation.array = new_arr + 2;
+    //std::cout << "reallocate:" << new_arr + 2 << " from:" << array << std::endl;
+    memcpy(new_arr, array - 2, std::min(size() + 2, new_size) * sizeof(value_type));
+    //std::cout << "deleting at " << array << "\n";
+    delete[](array - 2);
+    array = new_arr + 2;
     size() = new_size - 2;
 }
 
 void big_integer::trim()
 {
-    if (state == SMALL) return;
-    detach();
-    value_type zero { sign() ? ~0u : 0u };
-
-    size_t size_ { size() };
-    while (size_ > 1 && operator[](size_ - 1) == zero)
-        --size_;
-
-    if ((representation.array[size_ - 1] >> (BITS - 1)) != (~0u == zero)) ++size_;
-    if (size_ == 1)
+    if (state == SMALL)
     {
-        bool sign_ { convert_to_signed() };
-        state = SMALL;
-        value_type* old { representation.array };
-        representation.number = (sign_ ? -1 : 1 ) * static_cast<long long>(operator[](0));
-        //std::cout << "deleting at " << old << "\n";
-        delete[](old - 2);
+        if (number == 0)
+            sign = 0;
+        return;
     }
-    else
+    big_number.shrink_to_fit();
+    if (big_number.size() == 1)
     {
-        reallocate(size_);
+        value_type number_ { big_number[0] };
+        big_number.~vector();
+        number = number_;
+        state = SMALL;
+        if (number == 0)
+            sign = 0;
     }
 }
 
@@ -885,18 +865,9 @@ void big_integer::out() const
 {
     std::cout << (state ? "BIG" : "SMALL") << "\n";
     if (state == SMALL)
-        std::cout << representation.number << std::endl;
+        std::cout << number << std::endl;
     else
     {
-        std::cout << ref_count() << "_" << size() << ": ";
-        for (size_t i = 0; i < size(); ++i)
-        {
-            std::cout << representation.array[i] << " ";
-        }
-        std::cout << std::endl;
+        big_number.out();
     }
-}
-
-void big_integer::test()
-{
 }
