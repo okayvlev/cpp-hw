@@ -15,7 +15,7 @@ int main()
     big_integer b { 2 };
 
     big_integer c { a + b };
-    c.out();
+    std::cout << c << "\n";
     // std::cout << a / b << " " << b  << "\n";
 
     return 0;

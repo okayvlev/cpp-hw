@@ -222,7 +222,7 @@ void big_integer::quotient(const value_type& rhs)
 
 big_integer& big_integer::operator/=(big_integer const& rhs)
 {
-    assert(rhs == 0);
+    assert(rhs != 0);
     detach();
     sign ^= rhs.sign;
     if (state == SMALL && rhs.state == SMALL)
@@ -639,11 +639,9 @@ std::string to_string(big_integer const& a)
 {
     big_integer tmp { a };
     std::string str { };
-    tmp.detach();
 
     while (tmp != 0)
     {
-        //(tmp % 10).out();
         str += static_cast<char>('0' + (tmp % 10).number);
         tmp /= 10;
     }

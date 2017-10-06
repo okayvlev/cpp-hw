@@ -65,14 +65,14 @@ void vector<T>::quick_copy(const vector& other)
 template <typename T>
 vector<T>::vector(const vector& other)
 {
-    std::cout << "&copy\n";
+    // std::cout << "&copy\n";
     quick_copy(other);
 }
 
 template <typename T>
 vector<T>& vector<T>::operator=(const vector& other)
 {
-    std::cout << "&=\n";
+    // std::cout << "&=\n";
     quick_copy(other);
     return *this;
 }
@@ -80,10 +80,10 @@ vector<T>& vector<T>::operator=(const vector& other)
 template <typename T>
 vector<T>::~vector()
 {
-    std::cout << "~vector\n";
+    // std::cout << "~vector\n";
     if (--ref_counter() == 0)
     {
-        std::cout << "delete at " << array << "\n";
+        // std::cout << "delete at " << array << "\n";
         delete[](array - OFFSET);
     }
 }
@@ -92,20 +92,20 @@ template <typename T>
 void vector<T>::allocate(size_t new_size)
 {
     array = new value_type[new_size + OFFSET] { } + OFFSET;
-    std::cout << "allocate at " << array << "\n";
+    // std::cout << "allocate at " << array << "\n";
 }
 
 template <typename T>
 void vector<T>::quick_allocate(size_t new_size)
 {
     array = new value_type[new_size + OFFSET] + OFFSET;
-    std::cout << "quick allocate at " << array << "\n";
+    // std::cout << "quick allocate at " << array << "\n";
 }
 
 template <typename T>
 void vector<T>::detach()
 {
-    std::cout << "detach " << ref_counter() << "\n";
+    // std::cout << "detach " << ref_counter() << "\n";
     if (ref_counter() == 1)
         return;
     --ref_counter();
@@ -128,7 +128,7 @@ void vector<T>::shrink_to_fit()
     value_type* old_array { array };
     quick_allocate(size_);
     memcpy(array - OFFSET, old_array - OFFSET, sizeof(value_type) * (size_ + OFFSET));
-    std::cout << "delete[s] at " << old_array << "\n";
+    // std::cout << "delete[s] at " << old_array << "\n";
     delete[](old_array - OFFSET);
     size() = size_;
 }
@@ -143,7 +143,7 @@ void vector<T>::ensure_capacity(size_t new_size)
     value_type* old_array { array };
     allocate(new_size);
     memcpy(array - OFFSET, old_array - OFFSET, size_ + OFFSET);
-    std::cout << "delete[e] at " << old_array << "\n";
+    // std::cout << "delete[e] at " << old_array << "\n";
     delete[](old_array - OFFSET);
     size() = new_size;
 }
