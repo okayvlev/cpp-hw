@@ -260,6 +260,8 @@ big_integer& big_integer::operator/=(big_integer const& rhs)
 
     big_integer r { *this * f };
     big_integer d { rhs * f };
+    r.sign = 0;
+    d.sign = 0;
     vector<value_type> ans;
     ans.ensure_capacity(r.size() - d.size() + 1);
     big_integer dq { };
