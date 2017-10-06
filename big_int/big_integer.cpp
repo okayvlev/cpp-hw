@@ -111,14 +111,14 @@ big_integer& big_integer::operator+=(big_integer const& rhs)
     }
     detach();
     const vector<value_type> a { (state == BIG) ? big_number : number };
-    const vector<value_type> b { (state == BIG) ? rhs.big_number : rhs.number };
+    const vector<value_type> b { (rhs.state == BIG) ? rhs.big_number : rhs.number };
     vector<value_type> ans;
     ans.ensure_capacity(std::max(a.size(), b.size()) + 1);
 
     tr_value_type carry { };
     for (size_t i = 0; i < ans.size(); ++i)
     {
-        tr_value_type res { carry + (i < a.size()) ? a[i] : 0u };
+        tr_value_type res { carry + (i < a.size() ? a[i] : 0u) };
         if (i < b.size())
             res += b[i];
         carry = res / BASE;
@@ -145,7 +145,7 @@ big_integer& big_integer::operator-=(big_integer const& rhs)
 
     vector<value_type> ans;
     const vector<value_type> a { (state == BIG) ? big_number : number };
-    const vector<value_type> b { (state == BIG) ? rhs.big_number : rhs.number };
+    const vector<value_type> b { (rhs.state == BIG) ? rhs.big_number : rhs.number };
     ans.ensure_capacity(std::max(a.size(), b.size()));
 
     tr_value_type carry = 0;
@@ -192,7 +192,7 @@ big_integer& big_integer::operator*=(big_integer const& rhs)
     }
     vector<value_type> ans;
     const vector<value_type> a { (state == BIG) ? big_number : number };
-    const vector<value_type> b { (state == BIG) ? rhs.big_number : rhs.number };
+    const vector<value_type> b { (rhs.state == BIG) ? rhs.big_number : rhs.number };
     ans.ensure_capacity(a.size() + b.size());
     for (size_t i = 0; i < a.size(); ++i) {
         tr_value_type carry { };
@@ -236,10 +236,16 @@ big_integer& big_integer::operator/=(big_integer const& rhs)
         trim();
         return *this;
     }
-    if ((state == SMALL && rhs.state == BIG) || *this < rhs)
+    if (state == SMALL && rhs.state == BIG)
     {
         number = 0;
         trim();
+        return *this;
+    }
+    if (abs_greater(rhs, *this))
+    {
+        big_integer tmp { };
+        swap(tmp);
         return *this;
     }
     if (rhs.state == SMALL)
@@ -267,11 +273,13 @@ big_integer& big_integer::operator/=(big_integer const& rhs)
         h *= BIG_BASE;
         h += from_value_type(r[k]);
     }
-
+    //std::cout << "--===--\n";
     for (size_t k = r.size() - d.size() + 1; k--;)
     {
         h *= BIG_BASE;
         h += from_value_type(r[k]);
+        //std::cout << " h : \n";
+        //h.out();
         tr_value_type r2 { h.state == SMALL ? h.number : h[h.size() - 1] };
         if (h.state != SMALL && h.size() > d.size())
         {
@@ -279,17 +287,25 @@ big_integer& big_integer::operator/=(big_integer const& rhs)
             r2 += h[h.size() - 2];
         }
         tr_value_type qt { std::min(r2 / d1, BASE - 1) };
-        dq = d * qt;
+        //std::cout << qt << "\n";
+        dq = d * from_value_type(qt);
+        //std::cout << " dq : \n";
+        //dq.out();
         while (h < dq)
         {
             qt--;
             dq -= d;
         }
+
+        //std::cout << qt << " " <<  " dq : \n";
+        //dq.out();
         ans[k] = qt;
         h -= dq;
+        //h.out();
     }
     assign_vector(ans);
     trim();
+    //std::cout << "----====----\n";
     return *this;
 }
 
@@ -300,113 +316,32 @@ big_integer& big_integer::operator%=(big_integer const& rhs)
 
 big_integer& big_integer::operator&=(big_integer const& rhs)
 {
-    // big_integer tmp { };
-    //
-    // if (state == rhs.state && rhs.state == SMALL)
-    // {
-    //     tmp.number = number & rhs.number;
-    //     swap(tmp);
-    //     return *this;
-    // }
-    // big_integer a { *this };
-    // big_integer b { rhs };
-    // a.detach();
-    // b.detach();
-    // if (a.state == SMALL)
-    //     a.to_big_object();
-    // if (b.state == SMALL)
-    //     b.to_big_object();
-    //
-    // tmp.to_big_object();
-    // tmp.reallocate(std::max(a.size(), b.size()));
-    //
-    // const value_type zero_a { a.sign() ? ~0u : 0u };
-    // const value_type zero_b { b.sign() ? ~0u : 0u };
-    //
-    // for (size_t i = 0; i < tmp.size(); ++i)
-    // {
-    //     value_type x { i < a.size() ? a[i] : zero_a };
-    //     value_type y { i < b.size() ? b[i] : zero_b };
-    //     tmp[i] = x & y;
-    // }
-    // tmp.trim();
-    // swap(tmp);
+    vector<value_type> a { (state == BIG) ? big_number : number };
+    const vector<value_type> b { (rhs.state == BIG) ? rhs.big_number : rhs.number };
+
+    for (size_t i = 0; i < a.size(); ++i)
+    {
+        a[i] &= b[i];
+    }
+    assign_vector(a);
+    trim();
     return *this;
 }
 
 big_integer& big_integer::operator|=(big_integer const& rhs)
 {
-    // big_integer tmp { };
-    //
-    // if (state == rhs.state && rhs.state == SMALL)
-    // {
-    //     tmp.number = number | rhs.number;
-    //     swap(tmp);
-    //     return *this;
-    // }
-    // big_integer a { *this };
-    // big_integer b { rhs };
-    // a.detach();
-    // b.detach();
-    // if (a.state == SMALL)
-    //     a.to_big_object();
-    // if (b.state == SMALL)
-    //     b.to_big_object();
-    //
-    // tmp.to_big_object();
-    // tmp.reallocate(std::max(a.size(), b.size()));
-    //
-    // const value_type zero_a { a.sign() ? ~0u : 0u };
-    // const value_type zero_b { b.sign() ? ~0u : 0u };
-    //
-    // for (size_t i = 0; i < tmp.size(); ++i)
-    // {
-    //     value_type x { i < a.size() ? a[i] : zero_a };
-    //     value_type y { i < b.size() ? b[i] : zero_b };
-    //     tmp[i] = x | y;
-    // }
-    // tmp.trim();
-    // swap(tmp);
+
     return *this;
 }
 
 big_integer& big_integer::operator^=(big_integer const& rhs)
 {
-    // big_integer tmp { };
-    //
-    // if (state == rhs.state && rhs.state == SMALL)
-    // {
-    //     tmp.number = number ^ rhs.number;
-    //     swap(tmp);
-    //     return *this;
-    // }
-    // big_integer a { *this };
-    // big_integer b { rhs };
-    // a.detach();
-    // b.detach();
-    // a.to_big_object();
-    // b.to_big_object();
-    //
-    // tmp.to_big_object();
-    // tmp.reallocate(std::max(a.size(), b.size()));
-    //
-    // const value_type zero_a { a.sign() ? ~0u : 0u };
-    // const value_type zero_b { b.sign() ? ~0u : 0u };
-    //
-    // for (size_t i = 0; i < tmp.size(); ++i)
-    // {
-    //     value_type x { i < a.size() ? a[i] : zero_a };
-    //     value_type y { i < b.size() ? b[i] : zero_b };
-    //     tmp[i] = x ^ y;
-    // }
-    // tmp.trim();
-    // swap(tmp);
+
     return *this;
 }
 
 big_integer& big_integer::operator<<=(int rhs)
 {
-    //std::cout << "<<=\n";
     detach();
     value_type d { 1 };
     while (rhs % BITS != 0)
@@ -432,42 +367,33 @@ big_integer& big_integer::operator<<=(int rhs)
 
 big_integer& big_integer::operator>>=(int rhs)
 {
-    // //std::cout << ">>=\n";
-    // value_type d { 1 };
-    // big_integer tmp { *this };
-    // bool sign_ { sign() };
-    // while (rhs % BITS != 0)
-    // {
-    //     d *= 2;
-    //     --rhs;
-    // }
-    // tmp.detach();
-    // tmp /= from_value_type(d);
-    // tmp.to_big_object();
-    //
-    // value_type h { static_cast<value_type>(rhs / BITS) };
-    //
-    // if (h >= tmp.size())
-    // {
-    //     big_integer tmp { };
-    //     swap(tmp);
-    //     return *this;
-    // }
-    // for (size_t i = 0; i < tmp.size() - h; ++i)
-    // {
-    //     tmp[i] = tmp[i + h];
-    // }
-    // tmp.reallocate(tmp.size() - h);
-    // tmp.trim();
-    // if (sign_)
-    //     --tmp;
-    // if (sign() != sign_)
-    // {
-    //     tmp.reallocate(tmp.size() + 1);
-    //     if (!sign_)
-    //         tmp.operator[](tmp.size() - 1) = ~0u;
-    // }
-    // swap(tmp);
+    detach();
+    value_type d { 1 };
+    while (rhs % BITS != 0)
+    {
+        d *= 2;
+        --rhs;
+    }
+    if (d > 1)
+        quotient(d);
+    vector<value_type> tmp { (state == BIG) ? big_number : number };
+    int h { rhs / BITS };
+    if (static_cast<size_t>(h) >= tmp.size())
+    {
+        big_integer tmp { };
+        swap(tmp);
+        return *this;
+    }
+    if (h > 0)
+    {
+        for (size_t i = 0; i < tmp.size() - h; ++i)
+        {
+            tmp[i] = tmp[i + h];
+            tmp[i + h] = 0u;
+        }
+    }
+    assign_vector(tmp);
+    trim();
     return *this;
 }
 
@@ -488,7 +414,7 @@ big_integer big_integer::operator-() const
 big_integer big_integer::operator~() const
 {
     if (state == SMALL)
-        return ~number; // TODO is it okay?
+        return sign ? ~-number : ~number;
     big_integer tmp { *this };
     tmp.detach();
     tmp.convert_to_2s(sign);
@@ -654,6 +580,8 @@ std::string to_string(big_integer const& a)
         str += static_cast<char>('0' + (tmp % 10).number);
         tmp /= 10;
     }
+    if (str.size() == 0)
+        str = "0";
     if (a.sign)
         str += '-';
     std::reverse(str.begin(), str.end());
