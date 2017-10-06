@@ -1,5 +1,4 @@
 #include <iostream>
-#include <cstring>
 #include <algorithm>
 #include "big_integer.h"
 
@@ -75,7 +74,7 @@ void big_integer::swap(big_integer& other)
     if (sizeof(value_type) >= sizeof(vector<value_type>))   // Relying on a comiler to optimize this constexpr at compile time
         std::swap(number, other.number);
     else
-        std::swap(big_number, other.big_number);
+        ::swap(big_number, other.big_number);
     std::swap(sign, other.sign);
     std::swap(state, other.state);
 }
@@ -100,18 +99,24 @@ big_integer& big_integer::operator+=(big_integer const& rhs)
     detach();
     vector<value_type> ans;
     const vector<value_type> a { (state == BIG) ? big_number : number };
-    const vector<value_type> b { (state == BIG) ? rhs.big_number : number };
+    const vector<value_type> b { (state == BIG) ? rhs.big_number : rhs.number };
     ans.ensure_capacity(std::max(a.size(), b.size()) + 1);
+
     tr_value_type carry { };
     for (size_t i = 0; i < ans.size(); ++i)
     {
-        tr_value_type res { carry + a[i] };
+        tr_value_type res { carry + (i < a.size()) ? a[i] : 0u };
         if (i < b.size())
             res += b[i];
         carry = res / BASE;
         ans[i] = res % BASE;
     }
-    std::swap(ans, big_number);
+    ans.out();
+    big_number.out();
+    ::swap(ans, big_number);
+    std::cout << "okk\n";
+    ans.out();
+    big_number.out();
     trim();
     return *this;
 }
@@ -130,7 +135,7 @@ big_integer& big_integer::operator-=(big_integer const& rhs)
 
     vector<value_type> ans;
     const vector<value_type> a { (state == BIG) ? big_number : number };
-    const vector<value_type> b { (state == BIG) ? rhs.big_number : number };
+    const vector<value_type> b { (state == BIG) ? rhs.big_number : rhs.number };
     ans.ensure_capacity(std::max(a.size(), b.size()));
 
     tr_value_type carry = 0;
@@ -145,7 +150,7 @@ big_integer& big_integer::operator-=(big_integer const& rhs)
             carry = 0;
         ans[i] = res % BASE;
     }
-    std::swap(ans, big_number);
+    ::swap(ans, big_number);
     trim();
     return *this;
 }
@@ -162,7 +167,7 @@ void big_integer::multiply(const value_type& rhs)
         tmp[i] = res / BASE;
         carry = res % BASE;
     }
-    std::swap(tmp, big_number);
+    ::swap(tmp, big_number);
     trim();
 }
 
@@ -177,7 +182,7 @@ big_integer& big_integer::operator*=(big_integer const& rhs)
     }
     vector<value_type> ans;
     const vector<value_type> a { (state == BIG) ? big_number : number };
-    const vector<value_type> b { (state == BIG) ? rhs.big_number : number };
+    const vector<value_type> b { (state == BIG) ? rhs.big_number : rhs.number };
     ans.ensure_capacity(a.size() + b.size());
     for (size_t i = 0; i < a.size(); ++i) {
         tr_value_type carry { };
@@ -190,7 +195,7 @@ big_integer& big_integer::operator*=(big_integer const& rhs)
         }
         ans[i + rhs.size()] += carry;
     }
-    std::swap(ans, big_number);
+    ::swap(ans, big_number);
     trim();
     return *this;
 }
@@ -206,7 +211,7 @@ void big_integer::quotient(const value_type& rhs)
         tmp[i] = res / rhs;
         carry = res % rhs;
     }
-    std::swap(big_number, tmp);
+    ::swap(big_number, tmp);
     trim();
 }
 
@@ -273,7 +278,7 @@ big_integer& big_integer::operator/=(big_integer const& rhs)
         ans[k] = qt;
         h -= dq;
     }
-    std::swap(ans, big_number);
+    ::swap(ans, big_number);
     trim();
     return *this;
 }
@@ -410,7 +415,7 @@ big_integer& big_integer::operator<<=(int rhs)
     }
     for (int i = 0; i < h; ++i)
         tmp[i] = 0u;
-    std::swap(tmp, big_number);
+    ::swap(tmp, big_number);
     trim();
     return *this;
 }
