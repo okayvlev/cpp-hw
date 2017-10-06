@@ -112,7 +112,7 @@ void vector<T>::detach()
     value_type* old_array { array };
     size_t size_ { size() };
     quick_allocate(size_);
-    memcpy(array - 1, old_array - 1, size_ + 1);
+    memcpy(array - 1, old_array - 1, sizeof(value_type) * (size_ + 1));
     ref_counter() = 1;
 }
 
@@ -127,7 +127,7 @@ void vector<T>::shrink_to_fit()
         return;
     value_type* old_array { array };
     quick_allocate(size_);
-    memcpy(array - OFFSET, old_array - OFFSET, size_ + OFFSET);
+    memcpy(array - OFFSET, old_array - OFFSET, sizeof(value_type) * (size_ + OFFSET));
     std::cout << "delete[s] at " << old_array << "\n";
     delete[](old_array - OFFSET);
     size() = size_;

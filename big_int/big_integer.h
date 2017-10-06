@@ -72,6 +72,7 @@ private:
     const value_type& operator[](size_t n) const { return big_number[n]; };
     void detach();
     void swap(big_integer& tmp);
+    void assign_vector(vector<value_type>& tmp);
     void quick_copy(const big_integer& other);
     bool get_sign() { return big_number[big_number.size() - 1] >> (BITS - 1); };
     bool convert_to_signed();
