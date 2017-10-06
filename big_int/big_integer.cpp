@@ -268,17 +268,15 @@ big_integer& big_integer::operator/=(big_integer const& rhs)
     big_integer h { };
     tr_value_type d1 { d[d.size() - 1] };
 
-    static const big_integer BIG_BASE { big_integer { 1 } << BITS };
-
     for (int k = r.size() - 1; k > static_cast<int>(r.size() - d.size()); --k)
     {
-        h *= BIG_BASE;
+        h <<= BITS;
         h += from_value_type(r[k]);
     }
     //std::cout << "--===--\n";
     for (size_t k = r.size() - d.size() + 1; k--;)
     {
-        h *= BIG_BASE;
+        h <<= BITS;
         h += from_value_type(r[k]);
         //std::cout << " h : \n";
         //h.out();
@@ -354,6 +352,7 @@ big_integer& big_integer::operator<<=(int rhs)
     if (d > 1)
         multiply(d);
     vector<value_type> tmp { (state == BIG) ? big_number : number };
+    tmp.detach();
     int h { rhs / BITS };
     tmp.ensure_capacity(tmp.size() + h);
     for (int i = tmp.size() - 1; i >= h; --i)
@@ -379,6 +378,7 @@ big_integer& big_integer::operator>>=(int rhs)
     if (d > 1)
         quotient(d);
     vector<value_type> tmp { (state == BIG) ? big_number : number };
+    tmp.detach();
     int h { rhs / BITS };
     if (static_cast<size_t>(h) >= tmp.size())
     {
