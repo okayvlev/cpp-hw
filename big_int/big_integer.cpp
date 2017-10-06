@@ -17,6 +17,7 @@ void big_integer::quick_copy(const big_integer& other)
         state = BIG;
         big_number = other.big_number;
     }
+    sign = other.sign;
 }
 
 big_integer::big_integer(const big_integer& other)
@@ -30,7 +31,7 @@ big_integer::big_integer(int a)
     //std::cout << "int constructor " << a << "\n";
     state = SMALL;
     sign = a < 0;
-    number = sign ? -a : a;
+    number = sign ? -static_cast<value_type>(a) : a;
 }
 
 big_integer big_integer::from_value_type(value_type t) const
@@ -102,6 +103,8 @@ big_integer& big_integer::operator=(const big_integer& other)
 
 big_integer& big_integer::operator+=(big_integer const& rhs)
 {
+    if (rhs == 0)
+        return *this;
     if (sign != rhs.sign)
     {
         return *this -= -rhs;
@@ -128,12 +131,14 @@ big_integer& big_integer::operator+=(big_integer const& rhs)
 
 big_integer& big_integer::operator-=(big_integer const& rhs)
 {
+    if (rhs == 0)
+        return *this;
     if (sign != rhs.sign)
     {
         return *this += -rhs;
     }
     detach();
-    if (*this < rhs)
+    if (abs_greater(rhs, *this))
     {
         return *this = -(rhs - *this);
     }
@@ -169,8 +174,8 @@ void big_integer::multiply(const value_type& rhs)
     for (size_t i = 0; i < tmp.size(); ++i)
     {
         tr_value_type res { static_cast<tr_value_type>(rhs) * tmp[i] + carry };
-        tmp[i] = res / BASE;
-        carry = res % BASE;
+        carry = res / BASE;
+        tmp[i] = res % BASE;
     }
     assign_vector(tmp);
     trim();
@@ -475,7 +480,6 @@ big_integer big_integer::operator-() const
 {
     if (*this == 0)
         return *this;
-
     big_integer tmp { *this };
     tmp.sign ^= 1;
     return tmp;
@@ -595,15 +599,8 @@ bool operator<(big_integer const& a, big_integer const& b)
     return b > a;
 }
 
-bool operator>(big_integer const& a, big_integer const& b)
+bool abs_greater(big_integer const& a, big_integer const& b)
 {
-    if (!a.sign && b.sign)
-        return true;
-    if (a.sign && !b.sign)
-        return false;
-    if (a.sign && b.sign)
-        return a < b;
-    // Only positive pass
     if (a.state == big_integer::SMALL && b.state == big_integer::SMALL)
         return a.number > b.number;
     if (a.state == big_integer::BIG && b.state == big_integer::SMALL)
@@ -625,6 +622,18 @@ bool operator>(big_integer const& a, big_integer const& b)
     return false;
 }
 
+bool operator>(big_integer const& a, big_integer const& b)
+{
+    if (!a.sign && b.sign)
+        return true;
+    if (a.sign && !b.sign)
+        return false;
+    if (a.sign && b.sign)
+        return abs_greater(b, a);
+    // Only positive pass
+    return abs_greater(a, b);
+}
+
 bool operator<=(big_integer const& a, big_integer const& b)
 {
     return !(a > b);
@@ -638,8 +647,8 @@ bool operator>=(big_integer const& a, big_integer const& b)
 std::string to_string(big_integer const& a)
 {
     big_integer tmp { a };
+    tmp.detach();
     std::string str { };
-
     while (tmp != 0)
     {
         str += static_cast<char>('0' + (tmp % 10).number);
@@ -702,6 +711,7 @@ void big_integer::trim()
         if (size() > 1)
             return;
         big_integer tmp { };
+        tmp.sign = sign;
         tmp.number = big_number[0];
         swap(tmp);
     }
@@ -712,6 +722,8 @@ void big_integer::trim()
 void big_integer::out() const
 {
     std::cout << (state ? "BIG" : "SMALL") << "\n";
+    if (sign)
+        std::cout << "-";
     if (state == SMALL)
         std::cout << number << std::endl;
     else

@@ -142,7 +142,7 @@ void vector<T>::ensure_capacity(size_t new_size)
     size_t size_ { size() };
     value_type* old_array { array };
     allocate(new_size);
-    memcpy(array - OFFSET, old_array - OFFSET, size_ + OFFSET);
+    memcpy(array - OFFSET, old_array - OFFSET, sizeof(value_type) * (size_ + OFFSET));
     // std::cout << "delete[e] at " << old_array << "\n";
     delete[](old_array - OFFSET);
     size() = new_size;

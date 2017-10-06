@@ -11,11 +11,9 @@ int main()
     // big_integer b(                                                     "100000000000000000000000000000000000000");
     // big_integer c("100000000000000000000000000000000000000000000000000000");
     //
-    big_integer a { 1 };
-    big_integer b { 2 };
+    big_integer a = std::numeric_limits<int>::min();
 
-    big_integer c { a + b };
-    std::cout << c << "\n";
+    std::cout << a  << "\n";
     // std::cout << a / b << " " << b  << "\n";
 
     return 0;

@@ -44,6 +44,7 @@ struct big_integer
     friend bool operator==(big_integer const& a, big_integer const& b);
     friend bool operator!=(big_integer const& a, big_integer const& b);
     friend bool operator<(big_integer const& a, big_integer const& b);
+    friend bool abs_greater(big_integer const& a, big_integer const& b);
     friend bool operator>(big_integer const& a, big_integer const& b);
     friend bool operator<=(big_integer const& a, big_integer const& b);
     friend bool operator>=(big_integer const& a, big_integer const& b);
