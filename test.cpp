@@ -147,9 +147,9 @@ void compress(const char* src, const char* dst)
     encoder.encode();
     encoder.write_header(os);
     process_file([&](char c)
-        {
-            write_to_buffer(encoder.compress_second_iteration(c));
-        });
+    {
+        write_to_buffer(encoder.compress_second_iteration(c));
+    });
     flush_buffer();
 }
 
