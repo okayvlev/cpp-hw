@@ -1,11 +1,188 @@
 #include <cstdio>
 #include <cstring>
 #include <chrono>
-#include "huffman.h"
+#include <memory>
+#include <fstream>
+#include <iostream>
+#include <cstring>
+#include <vector>
+#include "huffman_encoder.h"
+
+#ifndef COLOR_SUPPORT
+#define COLOR_SUPPORT 1
+#endif
 
 using namespace std;
 
 const char* DEFAULT_FILE = "dst.huf";
+
+std::ifstream is { };
+std::ofstream os { };
+char read_buffer[huffman_encoder::BUFFER_SIZE];
+char write_buffer[huffman_encoder::BUFFER_SIZE] { };
+unsigned buffer_length;
+unsigned buffer_counter;
+
+void init_streams(const char* src, const char* dst)
+{
+    is = std::ifstream(src, std::ios_base::binary);
+    os = std::ofstream(dst, std::ios_base::binary);
+
+    if (!is.is_open()) throw std::runtime_error { "Couldn't open the source file" };
+    if (!os.is_open()) throw std::runtime_error { "Couldn't open the destination file" };
+}
+
+bool is_file_empty()
+{
+    return (is.peek() == std::ifstream::traits_type::eof());
+}
+
+void bad_file()
+{
+    std::cout << "Error while decoding file, perhaps the file is corrupted\n";
+    exit(0);
+}
+
+void read_block(int size = huffman_encoder::BUFFER_SIZE)
+{
+    is.read(read_buffer, size);
+}
+
+void process_file(std::function<void(char)> func, std::ios_base::seekdir it = is.beg)
+{
+    is.seekg(0, it);
+    auto pos = is.tellg();
+    is.seekg(0, is.end);
+    long long remainder { is.tellg() };
+    is.seekg(pos);
+    remainder -= is.tellg();
+
+    while (remainder > huffman_encoder::BUFFER_SIZE)
+    {
+        read_block();
+        for (auto& c : read_buffer) { func(c); }
+        remainder -= huffman_encoder::BUFFER_SIZE;
+    }
+
+    read_block(remainder);
+
+    for (int i = 0; i < remainder; ++i) { func(read_buffer[i]); }
+    is.clear();
+}
+
+void write_block(int size = huffman_encoder::BUFFER_SIZE)
+{
+    os.write(write_buffer, size);
+}
+
+void check_buffer()
+{
+    if (buffer_length == huffman_encoder::MAX_BUFFER_LENGTH)
+    {
+        buffer_length = 0;
+        write_block();
+        memset(write_buffer, 0, sizeof(char) * huffman_encoder::BUFFER_SIZE);    // XOR can mess with dirty bits
+    }
+}
+
+void write_to_buffer(const huffman_encoder::code& c)
+{
+    const unsigned offset { buffer_length % huffman_encoder::CHAR_DIGITS };
+    const unsigned roffset { huffman_encoder::CHAR_DIGITS - offset };
+
+    for (unsigned i = 0; i < c.digits.size() - 1; ++i)
+    {
+        write_buffer[buffer_length / huffman_encoder::CHAR_DIGITS] ^= static_cast<unsigned char>(c[i]) >> offset;
+        buffer_length += roffset;
+        check_buffer();
+        write_buffer[buffer_length / huffman_encoder::CHAR_DIGITS] ^= static_cast<unsigned char>(c[i]) << roffset;
+        buffer_length += offset;
+        check_buffer();
+    }
+    unsigned char left { static_cast<unsigned char>(c.size - (c.digits.size() - 1) * huffman_encoder::CHAR_DIGITS) };
+
+    write_buffer[buffer_length / huffman_encoder::CHAR_DIGITS] ^= static_cast<unsigned char>(c.digits.back()) >> offset;
+    if (left <= roffset)
+    {
+        buffer_length += left;
+        check_buffer();
+        return;
+    }
+    buffer_length += roffset;
+    check_buffer();
+    write_buffer[buffer_length / huffman_encoder::CHAR_DIGITS] ^= static_cast<unsigned char>(c.digits.back()) << roffset;
+    buffer_length += left - roffset;
+    check_buffer();
+}
+
+void write_char_to_buffer(char c)   // Don't use it with write_to_buffer
+{
+    write_buffer[buffer_counter] = c;
+    if (++buffer_counter == huffman_encoder::BUFFER_SIZE)
+    {
+        buffer_counter = 0;
+        write_block();
+    }
+}
+
+void flush_buffer()
+{
+    write_block(buffer_length / huffman_encoder::CHAR_DIGITS + ((buffer_length % huffman_encoder::CHAR_DIGITS) > 0));
+}
+
+void flush_buffer_to_counter()
+{
+    write_block(buffer_counter);
+}
+
+
+void compress(const char* src, const char* dst)
+{
+    init_streams(src, dst);
+    if (is_file_empty()) return;
+    huffman_encoder encoder { };
+    encoder.init_for_compressing();
+    buffer_length = 0;
+    process_file(encoder.compress_first_iteration);
+    encoder.encode();
+    encoder.write_header(os);
+    process_file([&](char c)
+        {
+            write_to_buffer(encoder.compress_second_iteration(c));
+        });
+    flush_buffer();
+}
+
+void decompress(const char* src, const char* dst)
+{
+    init_streams(src, dst);
+    if (is_file_empty()) return;
+    try
+    {
+        huffman_encoder encoder { };
+        if (!encoder.read_header(is))
+        {
+            bad_file();
+        }
+        encoder.init_for_decompressing();
+        process_file([&](char c)
+        {
+            std::vector<char> codes = encoder.decompress_iteration(c);
+            for (char c : codes)
+            {
+                write_char_to_buffer(c);
+            }
+        }, is.cur);
+        if (!is)
+            bad_file();
+        flush_buffer_to_counter();
+    }
+    catch (...)
+    {
+        bad_file();
+    }
+}
+
 
 int main(int argc, const char* argv[])
 {
