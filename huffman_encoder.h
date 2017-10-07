@@ -7,29 +7,20 @@
 #include <climits>
 #include <memory>
 
+constexpr unsigned CHAR_RANGE { CHAR_MAX - CHAR_MIN + 1 };
+constexpr unsigned CHAR_DIGITS { CHAR_BIT * sizeof(char) };
+constexpr unsigned BUFFER_SIZE { 64 * 1024 * 1024 };
+constexpr unsigned MAX_BUFFER_LENGTH { CHAR_DIGITS * BUFFER_SIZE };
+
 struct huffman_encoder
 {
-    static constexpr unsigned CHAR_RANGE { CHAR_MAX - CHAR_MIN + 1 };
-    static constexpr unsigned CHAR_DIGITS { CHAR_BIT * sizeof(char) };
-    static constexpr unsigned BUFFER_SIZE { 64 * 1024 * 1024 };
-    static constexpr unsigned MAX_BUFFER_LENGTH { CHAR_DIGITS * BUFFER_SIZE };
-
-    typedef unsigned long long ull;
+private:
     struct node;
+    typedef unsigned long long ull;
+public:
     using ptr = std::shared_ptr<node>;
     using puu = std::pair<ull, ptr>;
-    struct node
-    {
-        ptr left;
-        ptr right;
-        char c;
 
-        node(char c)
-        : left { }, right { }, c { c } { };
-
-        node(ptr left, ptr right, char c)
-        : left { left }, right { right }, c { c } { };
-    };
     struct code
     {
         unsigned size;  // Size in bits
@@ -59,11 +50,6 @@ struct huffman_encoder
             if ((digits.size() - 1) * CHAR_DIGITS >= size) digits.pop_back();
             else digits.back() &= (CHAR_RANGE - 1) ^ (1 << (CHAR_DIGITS - 1 - (size) % CHAR_DIGITS));
         }
-    };
-    struct anode    // Automata node
-    {               // IDEA build automata of CHAR_DIGITS-links; it can be huge, hence it needs to be allocated on heap
-        size_t small_links[2] { };
-        char leaf { };
     };
 
     // --------- Functors for interaction with program --------- //
@@ -106,6 +92,33 @@ struct huffman_encoder
 
     // ------------------------------------------------------- //
 
+    void init_for_compressing();
+    void init_for_decompressing();
+    void traverse(ptr cur);
+    void encode();
+    bool read_header(std::istream& is);
+    void write_header(std::ostream& os);
+
+private:
+
+    struct node
+    {
+        ptr left;
+        ptr right;
+        char c;
+
+        node(char c)
+        : left { }, right { }, c { c } { };
+
+        node(ptr left, ptr right, char c)
+        : left { left }, right { right }, c { c } { };
+    };
+    struct anode    // Automata node
+    {               // IDEA build automata of CHAR_DIGITS-links; it can be huge, hence it needs to be allocated on heap
+        size_t small_links[2] { };
+        char leaf { };
+    };
+
     code code_table_[CHAR_RANGE];    // We don't need to default initialize it before every usage
                                      // as all necessary elements will be reset with new values at every initialization
     code* code_table { code_table_ - CHAR_MIN };
@@ -136,13 +149,6 @@ struct huffman_encoder
         }
     } ca;  // Code automata
 
-
-    void init_for_compressing();
-    void init_for_decompressing();
-    void traverse(ptr cur);
-    void encode();
-    bool read_header(std::istream& is);
-    void write_header(std::ostream& os);
 };
 
 #endif // HUFFMAN_ENCODER_H

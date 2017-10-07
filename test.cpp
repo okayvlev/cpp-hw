@@ -18,8 +18,8 @@ const char* DEFAULT_FILE = "dst.huf";
 
 std::ifstream is { };
 std::ofstream os { };
-char read_buffer[huffman_encoder::BUFFER_SIZE];
-char write_buffer[huffman_encoder::BUFFER_SIZE] { };
+char read_buffer[BUFFER_SIZE];
+char write_buffer[BUFFER_SIZE] { };
 unsigned buffer_length;
 unsigned buffer_counter;
 
@@ -43,7 +43,7 @@ void bad_file()
     exit(0);
 }
 
-void read_block(int size = huffman_encoder::BUFFER_SIZE)
+void read_block(int size = BUFFER_SIZE)
 {
     is.read(read_buffer, size);
 }
@@ -57,11 +57,11 @@ void process_file(std::function<void(char)> func, std::ios_base::seekdir it = is
     is.seekg(pos);
     remainder -= is.tellg();
 
-    while (remainder > huffman_encoder::BUFFER_SIZE)
+    while (remainder > BUFFER_SIZE)
     {
         read_block();
         for (auto& c : read_buffer) { func(c); }
-        remainder -= huffman_encoder::BUFFER_SIZE;
+        remainder -= BUFFER_SIZE;
     }
 
     read_block(remainder);
@@ -70,38 +70,38 @@ void process_file(std::function<void(char)> func, std::ios_base::seekdir it = is
     is.clear();
 }
 
-void write_block(int size = huffman_encoder::BUFFER_SIZE)
+void write_block(int size = BUFFER_SIZE)
 {
     os.write(write_buffer, size);
 }
 
 void check_buffer()
 {
-    if (buffer_length == huffman_encoder::MAX_BUFFER_LENGTH)
+    if (buffer_length == MAX_BUFFER_LENGTH)
     {
         buffer_length = 0;
         write_block();
-        memset(write_buffer, 0, sizeof(char) * huffman_encoder::BUFFER_SIZE);    // XOR can mess with dirty bits
+        memset(write_buffer, 0, sizeof(char) * BUFFER_SIZE);    // XOR can mess with dirty bits
     }
 }
 
 void write_to_buffer(const huffman_encoder::code& c)
 {
-    const unsigned offset { buffer_length % huffman_encoder::CHAR_DIGITS };
-    const unsigned roffset { huffman_encoder::CHAR_DIGITS - offset };
+    const unsigned offset { buffer_length % CHAR_DIGITS };
+    const unsigned roffset { CHAR_DIGITS - offset };
 
     for (unsigned i = 0; i < c.digits.size() - 1; ++i)
     {
-        write_buffer[buffer_length / huffman_encoder::CHAR_DIGITS] ^= static_cast<unsigned char>(c[i]) >> offset;
+        write_buffer[buffer_length / CHAR_DIGITS] ^= static_cast<unsigned char>(c[i]) >> offset;
         buffer_length += roffset;
         check_buffer();
-        write_buffer[buffer_length / huffman_encoder::CHAR_DIGITS] ^= static_cast<unsigned char>(c[i]) << roffset;
+        write_buffer[buffer_length / CHAR_DIGITS] ^= static_cast<unsigned char>(c[i]) << roffset;
         buffer_length += offset;
         check_buffer();
     }
-    unsigned char left { static_cast<unsigned char>(c.size - (c.digits.size() - 1) * huffman_encoder::CHAR_DIGITS) };
+    unsigned char left { static_cast<unsigned char>(c.size - (c.digits.size() - 1) * CHAR_DIGITS) };
 
-    write_buffer[buffer_length / huffman_encoder::CHAR_DIGITS] ^= static_cast<unsigned char>(c.digits.back()) >> offset;
+    write_buffer[buffer_length / CHAR_DIGITS] ^= static_cast<unsigned char>(c.digits.back()) >> offset;
     if (left <= roffset)
     {
         buffer_length += left;
@@ -110,7 +110,7 @@ void write_to_buffer(const huffman_encoder::code& c)
     }
     buffer_length += roffset;
     check_buffer();
-    write_buffer[buffer_length / huffman_encoder::CHAR_DIGITS] ^= static_cast<unsigned char>(c.digits.back()) << roffset;
+    write_buffer[buffer_length / CHAR_DIGITS] ^= static_cast<unsigned char>(c.digits.back()) << roffset;
     buffer_length += left - roffset;
     check_buffer();
 }
@@ -118,7 +118,7 @@ void write_to_buffer(const huffman_encoder::code& c)
 void write_char_to_buffer(char c)   // Don't use it with write_to_buffer
 {
     write_buffer[buffer_counter] = c;
-    if (++buffer_counter == huffman_encoder::BUFFER_SIZE)
+    if (++buffer_counter == BUFFER_SIZE)
     {
         buffer_counter = 0;
         write_block();
@@ -127,7 +127,7 @@ void write_char_to_buffer(char c)   // Don't use it with write_to_buffer
 
 void flush_buffer()
 {
-    write_block(buffer_length / huffman_encoder::CHAR_DIGITS + ((buffer_length % huffman_encoder::CHAR_DIGITS) > 0));
+    write_block(buffer_length / CHAR_DIGITS + ((buffer_length % CHAR_DIGITS) > 0));
 }
 
 void flush_buffer_to_counter()
