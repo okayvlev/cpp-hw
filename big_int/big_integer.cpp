@@ -314,38 +314,29 @@ big_integer& big_integer::operator%=(big_integer const& rhs)
     return *this -= (*this / rhs) * rhs;
 }
 
+void big_integer::ensure_big_object()
+{
+    if (state == SMALL)
+    {
+        big_number = vector<value_type> { number };
+        state = BIG;
+    }
+}
+
 void big_integer::perform_bitwise_operation(std::function<void(value_type&, value_type&)> func, const big_integer& rhs)
 {
     big_integer a { *this };
     a.detach();
     big_integer b { rhs };
     b.detach();
-    if (a.state == SMALL)
-    {
-        a.big_number = vector<value_type> { a.number };
-        a.state = BIG;
-    }
-    if (b.state == SMALL)
-    {
-        b.big_number = vector<value_type> { b.number };
-        b.state = BIG;
-    }
+    a.ensure_big_object();
+    b.ensure_big_object();
     if (a.sign)
         a.simple_conversion();
     if (b.sign)
         b.simple_conversion();
-    if (a.state == SMALL)
-    {
-        a.big_number = vector<value_type> { a.number };
-        a.state = BIG;
-    }
-    if (b.state == SMALL)
-    {
-        b.big_number = vector<value_type> { b.number };
-        b.state = BIG;
-    }
-    //a.out();
-    //b.out();
+    a.ensure_big_object();
+    b.ensure_big_object();
     if (a.size() < b.size())
     {
         value_type zero { a.get_sign() ? ~0u : 0u };

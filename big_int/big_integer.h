@@ -81,6 +81,7 @@ private:
     void convert_to_2s(bool sign);
     void simple_conversion();
     void reverse_bytes();
+    void ensure_big_object();
     void perform_bitwise_operation(std::function<void(value_type&, value_type&)>, const big_integer&);
     void trim();
     big_integer from_value_type(value_type t) const;
