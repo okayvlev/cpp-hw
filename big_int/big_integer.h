@@ -54,8 +54,8 @@ struct big_integer
     void out() const;
 
 private:
-    static constexpr int BITS { 32 }; // TODO
-    static constexpr tr_value_type BASE { static_cast<tr_value_type>(1) << BITS }; // TODO
+    static constexpr int BITS { std::numeric_limits<value_type>::digits }; // Assuming it's 32
+    static constexpr tr_value_type BASE { static_cast<tr_value_type>(1) << BITS };
     enum
     {
         SMALL,

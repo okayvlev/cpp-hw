@@ -6,7 +6,6 @@ big_integer::big_integer() : big_integer { 0 } { }
 
 void big_integer::quick_copy(const big_integer& other)
 {
-    //std::cout << "quick copy\n";
     if (other.state == SMALL)
     {
         state = SMALL;
@@ -22,13 +21,11 @@ void big_integer::quick_copy(const big_integer& other)
 
 big_integer::big_integer(const big_integer& other)
 {
-    //std::cout << "copy constructor\n";
     quick_copy(other);
 }
 
 big_integer::big_integer(int a)
 {
-    //std::cout << "int constructor " << a << "\n";
     state = SMALL;
     sign = a < 0;
     number = sign ? -static_cast<value_type>(a) : a;
@@ -43,7 +40,6 @@ big_integer big_integer::from_value_type(value_type t) const
 
 big_integer::big_integer(std::string const& str) : big_integer { }
 {
-    //std::cout << "string constructor\n";
     bool sign_ { str.size() > 0 && str[0] == '-' };
     big_integer tmp { };
 
@@ -63,7 +59,6 @@ big_integer::big_integer(std::string const& str) : big_integer { }
 
 big_integer::~big_integer()
 {
-    //std::cout << "destructor\n";
     if (state == BIG)
         big_number.~vector();
 }
@@ -80,7 +75,6 @@ void big_integer::assign_vector(vector<value_type>& tmp)
 
 void big_integer::swap(big_integer& other)
 {
-    //std::cout << "swap\n";
     // Union must be fully swapped, therefore the largest member of union should be chosen
     if (sizeof(value_type) >= sizeof(vector<value_type>))   // Relying on a compiler to optimize this constexpr at compile time
         std::swap(number, other.number);
@@ -92,7 +86,6 @@ void big_integer::swap(big_integer& other)
 
 big_integer& big_integer::operator=(const big_integer& other)
 {
-    //std::cout << "=\n";
     if (&other != this)
     {
         big_integer tmp { other };
@@ -273,13 +266,11 @@ big_integer& big_integer::operator/=(big_integer const& rhs)
         h <<= BITS;
         h += from_value_type(r[k]);
     }
-    //std::cout << "--===--\n";
     for (size_t k = r.size() - d.size() + 1; k--;)
     {
         h <<= BITS;
         h += from_value_type(r[k]);
-        //std::cout << " h : \n";
-        //h.out();
+
         tr_value_type r2 { h.state == SMALL ? h.number : h[h.size() - 1] };
         if (h.state != SMALL && h.size() > d.size())
         {
@@ -287,25 +278,17 @@ big_integer& big_integer::operator/=(big_integer const& rhs)
             r2 += h[h.size() - 2];
         }
         tr_value_type qt { std::min(r2 / d1, BASE - 1) };
-        //std::cout << qt << "\n";
         dq = d * from_value_type(qt);
-        //std::cout << " dq : \n";
-        //dq.out();
         while (h < dq)
         {
             qt--;
             dq -= d;
         }
-
-        //std::cout << qt << " " <<  " dq : \n";
-        //dq.out();
         ans[k] = qt;
         h -= dq;
-        //h.out();
     }
     assign_vector(ans);
     trim();
-    //std::cout << "----====----\n";
     return *this;
 }
 
@@ -654,14 +637,12 @@ std::ostream& operator<<(std::ostream& s, big_integer const& a)
 
 void big_integer::detach()
 {
-    //std::cout << "detach\n";
     if (state == SMALL) return;
     big_number.detach();
 }
 
 bool big_integer::convert_to_signed()
 {
-    //std::cout << "convert\n";
     if (!get_sign())
         return false;
     simple_conversion();
@@ -670,7 +651,6 @@ bool big_integer::convert_to_signed()
 
 void big_integer::convert_to_2s(bool sign)
 {
-    //std::cout << "convert to 2s\n";
     assert(state == BIG);
     if (sign)
         simple_conversion();

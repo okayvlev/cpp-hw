@@ -65,14 +65,12 @@ void vector<T>::quick_copy(const vector& other)
 template <typename T>
 vector<T>::vector(const vector& other)
 {
-    // std::cout << "&copy\n";
     quick_copy(other);
 }
 
 template <typename T>
 vector<T>& vector<T>::operator=(const vector& other)
 {
-    // std::cout << "&=\n";
     quick_copy(other);
     return *this;
 }
@@ -80,7 +78,6 @@ vector<T>& vector<T>::operator=(const vector& other)
 template <typename T>
 vector<T>::~vector()
 {
-    // std::cout << "~vector\n";
     if (--ref_counter() == 0)
     {
         // std::cout << "delete at " << array << "\n";
@@ -105,7 +102,6 @@ void vector<T>::quick_allocate(size_t new_size)
 template <typename T>
 void vector<T>::detach()
 {
-    // std::cout << "detach " << ref_counter() << "\n";
     if (ref_counter() == 1)
         return;
     --ref_counter();
