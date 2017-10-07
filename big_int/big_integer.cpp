@@ -314,29 +314,91 @@ big_integer& big_integer::operator%=(big_integer const& rhs)
     return *this -= (*this / rhs) * rhs;
 }
 
-big_integer& big_integer::operator&=(big_integer const& rhs)
+void big_integer::perform_bitwise_operation(std::function<void(value_type&, value_type&)> func, const big_integer& rhs)
 {
-    vector<value_type> a { (state == BIG) ? big_number : number };
-    const vector<value_type> b { (rhs.state == BIG) ? rhs.big_number : rhs.number };
-
+    big_integer a { *this };
+    a.detach();
+    big_integer b { rhs };
+    b.detach();
+    if (a.state == SMALL)
+    {
+        a.big_number = vector<value_type> { a.number };
+        a.state = BIG;
+    }
+    if (b.state == SMALL)
+    {
+        b.big_number = vector<value_type> { b.number };
+        b.state = BIG;
+    }
+    if (a.sign)
+        a.simple_conversion();
+    if (b.sign)
+        b.simple_conversion();
+    if (a.state == SMALL)
+    {
+        a.big_number = vector<value_type> { a.number };
+        a.state = BIG;
+    }
+    if (b.state == SMALL)
+    {
+        b.big_number = vector<value_type> { b.number };
+        b.state = BIG;
+    }
+    //a.out();
+    //b.out();
+    if (a.size() < b.size())
+    {
+        value_type zero { a.get_sign() ? ~0u : 0u };
+        a.big_number.ensure_capacity(b.size());
+        if (zero > 0u)
+            for (int i = a.size() - 1; i >= 0; --i)
+            {
+                if (a[i] == 0u)
+                    a[i] = zero;
+                else
+                    break;
+            }
+    }
+    if (a.size() > b.size())
+    {
+        value_type zero { b.get_sign() ? ~0u : 0u };
+        b.big_number.ensure_capacity(a.size());
+        if (zero > 0u)
+            for (int i = b.size() - 1; i >= 0; --i)
+            {
+                if (b[i] == 0u)
+                    b[i] = zero;
+                else
+                    break;
+            }
+    }
     for (size_t i = 0; i < a.size(); ++i)
     {
-        a[i] &= b[i];
+        func(a[i], b[i]);
     }
-    assign_vector(a);
-    trim();
+
+    a.sign = a.get_sign();
+    if (a.get_sign())
+        a.simple_conversion();
+    a.trim();
+    swap(a);
+}
+
+big_integer& big_integer::operator&=(big_integer const& rhs)
+{
+    perform_bitwise_operation([&](value_type& a, value_type& b) { a &= b; }, rhs);
     return *this;
 }
 
 big_integer& big_integer::operator|=(big_integer const& rhs)
 {
-
+    perform_bitwise_operation([&](value_type& a, value_type& b) { a |= b; }, rhs);
     return *this;
 }
 
 big_integer& big_integer::operator^=(big_integer const& rhs)
 {
-
+    perform_bitwise_operation([&](value_type& a, value_type& b) { a ^= b; }, rhs);
     return *this;
 }
 
@@ -368,6 +430,8 @@ big_integer& big_integer::operator<<=(int rhs)
 
 big_integer& big_integer::operator>>=(int rhs)
 {
+    if (rhs == 0)
+        return *this;
     detach();
     value_type d { 1 };
     while (rhs % BITS != 0)
@@ -396,6 +460,8 @@ big_integer& big_integer::operator>>=(int rhs)
     }
     assign_vector(tmp);
     trim();
+    if (sign)
+    operator--();
     return *this;
 }
 
@@ -630,7 +696,10 @@ void big_integer::reverse_bytes()
 void big_integer::simple_conversion()
 {
     reverse_bytes();
+    bool sign_ { sign };
+    sign = 0;
     operator++();
+    sign = sign_;
 }
 
 void big_integer::trim()
