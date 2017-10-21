@@ -10,14 +10,23 @@ int main()
     std::cout << seed << ":\n";
     srand(seed);
     std::map<int, int> b;
-    for (int i = 0; i < 4000; ++i)
+    for (int i = 0; i < 8000; ++i)
     {
         int x { rand() };
         int y { rand() };
         //std::cout << "insert " << x << " " << y << "\n";
-        a.insert(x, y);
-        if (b.find(x) == b.end())
-            b[x] = y;
+        if (rand() % 2)
+        {
+            a.insert(x, y);
+            if (b.find(x) == b.end())
+                b[x] = y;
+        }
+        else
+        {
+            if (a.find_left(x) != a.end_left())
+                a.erase(a.find_left(x));
+            b.erase(x);
+        }
         // a.right_tree.out();
         // a.left_tree.out();
     }
@@ -46,6 +55,7 @@ int main()
         }
     }
     std::cout << "OK\n";
+    std::cout << (--b.end())->first << " " << *--a.end_left() << "\n";
     //
     // int ans { };
     // for (auto it = a.begin_left(); it != a.end_left(); ++it)

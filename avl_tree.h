@@ -10,8 +10,6 @@ class AVL_tree
 
     static constexpr int HEIGHT_DIFF { 1 };
 
-    node* root;
-
     int get_height(node* t) const
     {
         return t == nullptr ? -1 : t->height;
@@ -115,15 +113,6 @@ class AVL_tree
             update_height(t);
             t = next;
         }
-    }
-
-    node* find_max(node* t) const
-    {
-        if (t == nullptr)
-            return t;
-        if (t->right != nullptr)
-            return find_max(t->right);
-        return t;
     }
 
     node* find(node* t, const typename node::value_type& v) const
@@ -240,6 +229,7 @@ class AVL_tree
     }
 
 public:
+    node* root;
 
     AVL_tree()
         : root { nullptr }
@@ -291,6 +281,24 @@ public:
             return t;
         if (t->left != nullptr)
             return find_min(t->left);
+        return t;
+    }
+
+    static node* find_max(node* t)
+    {
+        if (t == nullptr)
+            return t;
+        if (t->right != nullptr)
+            return find_max(t->right);
+        return t;
+    }
+
+    static node* get_root(node* t)
+    {
+        if (t == nullptr)
+            return t;
+        if (t->parent != nullptr)
+            return get_root(t->parent);
         return t;
     }
 
