@@ -92,6 +92,12 @@ public:
         static constexpr bool half { Half };
         typedef avl_node<typename node_traits<left_t, right_t, half>::value_type> root_t;
 
+        typedef std::ptrdiff_t difference_type;
+        typedef typename node_traits<left_t, right_t, half>::value_type value_type;
+        typedef value_type* pointer;
+        typedef value_type& reference;
+        typedef std::bidirectional_iterator_tag iterator_category;
+
         node<left_t, right_t>* node_ptr;
         root_t* root;
 

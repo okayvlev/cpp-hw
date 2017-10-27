@@ -1,8 +1,6 @@
 #ifndef AVL_TREE_H
 #define AVL_TREE_H
 
-#include <cassert>
-
 template<class T>
 class AVL_tree
 {
@@ -189,44 +187,62 @@ class AVL_tree
         else
         {
             node* minptr { find_min(t->right) };
-            if (minptr->parent)
+            if (minptr == t->right)
+            {
+                minptr->left = t->left;
+                if (t->left)
+                    t->left->parent = minptr;
+                minptr->parent = t->parent;
+                if (t->parent)
+                {
+                    if (t->parent->left == t)
+                        t->parent->left = minptr;
+                    else
+                        t->parent->right = minptr;
+                }
+            }
+            else
             {
                 if (minptr->parent->left == minptr)
-                    minptr->parent->left = nullptr;
+                    minptr->parent->left = minptr->right;
                 else
-                    minptr->parent->right = nullptr;
-            }
-            minptr->parent = t->parent;
-            minptr->left = t->left;
-            if (t->right != minptr->right)
+                    minptr->parent->right = minptr->right;
+                if (minptr->right)
+                {
+                    minptr->right->parent = minptr->parent;
+                }
+                minptr->left = t->left;
+                minptr->parent = t->parent;
                 minptr->right = t->right;
-            else
-                minptr->right = nullptr;
-            if (t->parent)
-            {
-                if (t->parent->left == t)
-                    t->parent->left = minptr;
-                else
-                    t->parent->right = minptr;
+                if (t->parent)
+                {
+                    if (t->parent->left == t)
+                        t->parent->left = minptr;
+                    else
+                        t->parent->right = minptr;
+                }
+                if (minptr->left)
+                {
+                    minptr->left->parent = minptr;
+                }
+                if (minptr->right)
+                {
+                    minptr->right->parent = minptr;
+                }
             }
-            t = minptr;
-            if (t->left)
-                t->left->parent = t;
-            if (t->right)
-                t->right->parent = t;
-            update_height(t);
-            balance(t);
+            update_height(minptr);
+            balance(minptr);
         }
     }
 
-    void out(node* t)
-    {
-        if (t == nullptr)
-            return;
-        out(t->left);
-        std::cout << t->value << "[" << t << "]" << ": h=" << t->height << " p=" << t->parent << " l=" << t->left << " r=" << t->right << "\n";
-        out(t->right);
-    }
+    // void out(node* t)
+    // {
+    //     if (t == nullptr)
+    //         return;
+    //     out(t->left);
+    //     std::cout << t->value << "[" << t << "]" << ": h=" << t->height << " p=" << t->parent << " l=" << t->left << " r=" << t->right << "\n";
+    //     out(t->right);
+    // }
 
 public:
     node* root;
@@ -270,10 +286,10 @@ public:
         return find_min(root);
     }
 
-    void out()
-    {
-        out(root);
-    }
+    // void out()
+    // {
+    //     out(root);
+    // }
 
     static node* find_min(node* t)
     {
