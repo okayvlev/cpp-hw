@@ -213,6 +213,101 @@ TEST(test_set, erase2) {
 	}
 }
 
+
+std::set<void*> cnt;
+
+struct Counter {
+ int x;
+ Counter(int x = 0) : x(x) {
+  cnt.insert(this);
+ }
+ Counter(Counter const& other): x(other.x) {
+  cnt.insert(this);
+ }
+ void swap(Counter& other) {
+  std::swap(x, other.x);
+ }
+ Counter& operator=(Counter const& other) {
+  Counter tmp(other);
+  swap(tmp);
+  return *this;
+ }
+ bool operator<(Counter const& other) const {
+  return x < other.x;
+ }
+ bool operator>(Counter const& other) const {
+  return x > other.x;
+ }
+ bool operator==(Counter const& other) const {
+  return x == other.x;
+ }
+ friend ostream& operator<<(ostream& o, Counter const& c) {
+  o << c.x;
+  return o;
+ }
+ ~Counter() {
+  cnt.erase(this);
+ }
+};
+
+TEST(test_set, counter_no_cpy) {
+ if (true) {
+  persistent_set<Counter> s;
+  for (int i = 0; i < 25; ++i)
+   s.insert(Counter(i));
+  for (int i = 0; i < 5; ++i)
+   s.insert(*s.begin());
+  for (int i = 1; i <= 5; ++i) {
+   auto it = s.end();
+   for (int j = 0; j <= i; ++j) {
+	//    cerr << "1\n";
+    --it;
+	// cerr << "1\n";
+}
+   s.insert(*it);
+  }
+  // cerr << "1\n";
+  s.erase(s.begin());
+  for (int i = 0; i < 10; ++i) {
+   auto it = s.begin();
+   for (int j = 0; j < i; ++j)
+    ++it;
+   s.erase(it);
+  }
+ }
+ cout << "objects count : " << cnt.size() << '\n';
+ EXPECT_TRUE(cnt.empty());
+ cnt.clear();
+}
+
+TEST(test_set, counter_cpy) {
+ if (true) {
+  persistent_set<Counter> s;
+  for (int i = 0; i < 25; ++i)
+   s.insert(Counter(i));
+  persistent_set<Counter> p(s);
+  for (int i = 0; i < 5; ++i)
+   p.insert(*p.begin());
+  for (int i = 1; i <= 5; ++i) {
+   auto it = p.end();
+   for (int j = 0; j <= i; ++j)
+    --it;
+   p.insert(*it);
+  }
+  p.erase(p.begin());
+  for (int i = 0; i < 10; ++i) {
+   auto it = p.begin();
+   for (int j = 0; j < i; ++j)
+    ++it;
+   p.erase(it);
+  }
+ }
+ cout << "objects count : " << cnt.size() << '\n';
+ EXPECT_TRUE(cnt.empty());
+
+}
+
+
 struct smth {
 	int var;
 	smth(int var) : var(var) {}

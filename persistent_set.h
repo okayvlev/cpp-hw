@@ -40,7 +40,7 @@ public:
 
     iterator end() const noexcept
     {
-        return iterator { root.get() };  // storing root for operator--
+        return iterator { root };  // storing root for operator--
     }
 
     void swap(const persistent_set& other) noexcept
@@ -88,7 +88,7 @@ template <typename T, template <typename> class P>
 typename persistent_set<T, P>::iterator
 persistent_set<T, P>::find(const value_type& v)
 {
-    iterator it { root.get() };
+    iterator it { root };
     node_ptr cur { root };
 
     while (cur != nullptr) {
@@ -110,15 +110,14 @@ persistent_set<T, P>::insert(value_type v)
 {
     if (root == nullptr) {
         root = new node(std::move(v));
-        iterator it { root.get() };
+        iterator it { root };
         it.push(root);
 
         return { it, true };
     }
 
-    iterator it { root.get() };
+    iterator it { root };
     node_ptr cur { root };
-
     while (cur != nullptr) {
         it.push(new node(cur));
         if (cur.get()->value == v) {
@@ -143,7 +142,6 @@ persistent_set<T, P>::insert(value_type v)
     }
 
     root = it.path.front();
-
     return { it, true };
 }
 
@@ -213,7 +211,7 @@ void persistent_set<T, P>::erase(typename persistent_set<T, P>::iterator it)
 template <typename T, template <typename> class P>
 typename persistent_set<T, P>::iterator persistent_set<T, P>::begin() const
 {
-    iterator it { root.get() };
+    iterator it { root };
     node_ptr cur { root };
 
     while (cur != nullptr) {
@@ -282,10 +280,10 @@ public:
     }
 
 private:
-    const node* origin = nullptr;   // doesn't have ownership
+    node_ptr origin;
     std::vector<node_ptr> path;
 
-    iterator(const node* origin) noexcept // doesn't make sense outside of class
+    iterator(const node_ptr& origin) noexcept // doesn't make sense outside of class
         : origin { origin }
     { }
 
@@ -333,6 +331,16 @@ typename persistent_set<T, P>::iterator& persistent_set<T, P>::iterator::operato
 template <typename T, template <typename> class P>
 typename persistent_set<T, P>::iterator& persistent_set<T, P>::iterator::operator--()
 {
+    if (path.size() == 0) {
+        node_ptr cur { origin };
+
+        while (cur) {
+            push(cur);
+            cur = cur.get()->right;
+        }
+
+        return *this;
+    }
     if (path.back().get()->left != nullptr) {
         push(path.back().get()->left);
         while (path.back().get()->right != nullptr) {
