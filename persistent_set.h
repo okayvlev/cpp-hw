@@ -347,6 +347,8 @@ typename persistent_set<T, P>::iterator& persistent_set<T, P>::iterator::operato
             path.pop_back();
         }
     }
+
+    return *this;
 }
 
 #endif // PERSISTENT_SET_H
