@@ -28,8 +28,7 @@ struct shared_ptr
 
     ~shared_ptr() noexcept
     {
-        if (data && !--*ref_counter)
-        {
+        if (data && !--*ref_counter) {
             delete ref_counter;
             delete data;
         }

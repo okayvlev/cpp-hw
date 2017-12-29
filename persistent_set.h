@@ -188,15 +188,15 @@ void persistent_set<T, P>::erase(typename persistent_set<T, P>::iterator it)
 
     /* Linking new branch to the tree */
 
-    bool isChanged { false };
+    bool is_changed { false };
     node_ptr cur { new_v };
     node* pred = v;
 
     for (size_t i = it.path.size() - 1; i > 0; --i) {
         if (it.path[i].get() == v) {
-            isChanged = true;
+            is_changed = true;
         }
-        if (isChanged) {
+        if (is_changed) {
             node* pr { it.path[i - 1].get() };
             cur = new node(
                 pr->value,

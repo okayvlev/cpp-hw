@@ -18,7 +18,7 @@ struct linked_ptr
     {
         if (!data)
             return;
-        left = &other;
+        left = &other;      // pointer must be const
         right = other.right;
         update_neighbours();
     }
@@ -32,8 +32,7 @@ struct linked_ptr
 
     ~linked_ptr() noexcept
     {
-        if (data)
-        {
+        if (data) {
             if (!left && !right)
                 delete data;
             if (left)
@@ -76,7 +75,7 @@ struct linked_ptr
 
 private:
     value_type* data { };
-    mutable const linked_ptr* left { };
+    mutable const linked_ptr* left { }; // is mutable to be able to change pointer 
     mutable const linked_ptr* right { };
 
     void swap(linked_ptr& other) noexcept
