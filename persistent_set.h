@@ -1,7 +1,6 @@
 #ifndef PERSISTENT_SET_H
 #define PERSISTENT_SET_H
 
-#include <iostream>
 #include <vector>
 #include "smart_pointers/shared_ptr.h"
 
@@ -179,6 +178,7 @@ void persistent_set<T, P>::erase(typename persistent_set<T, P>::iterator it)
         else {
             right = right.get()->right;
         }
+
         /* ---------------------------------------------- */
 
         new_v = new node(min_ptr->value, v->left, right);
