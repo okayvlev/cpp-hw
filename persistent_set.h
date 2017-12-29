@@ -248,25 +248,7 @@ public:
         return path.back().get()->value;
     }
 
-    iterator& operator++()
-    {
-        if (path.back().get()->right != nullptr) {
-            push(path.back().get()->right);
-            while (path.back().get()->left != nullptr) {
-                push(path.back().get()->left);
-            }
-        }
-        else {
-            node_ptr pr { path.back() };
-            path.pop_back();
-            while (!path.empty() && path.back().get()->right == pr) {
-                pr = path.back();
-                path.pop_back();
-            }
-        }
-
-        return *this;   // if path is empty, it will be equal to end()
-    }
+    iterator& operator++();
 
     iterator operator++(int)
     {
@@ -275,23 +257,7 @@ public:
         return it;
     }
 
-    iterator& operator--()
-    {
-        if (path.back().get()->left != nullptr) {
-            push(path.back().get()->left);
-            while (path.back().get()->right != nullptr) {
-                push(path.back().get()->right);
-            }
-        }
-        else {
-            node_ptr pr { path.back() };
-            path.pop_back();
-            while (path.back().get()->left == pr) { // --begin() is undefined
-                pr = path.back();
-                path.pop_back();
-            }
-        }
-    }
+    iterator& operator--();
 
     iterator operator--(int)
     {
@@ -342,5 +308,45 @@ private:
 
     friend class persistent_set;
 };
+
+template <typename T, template <typename> class P>
+typename persistent_set<T, P>::iterator& persistent_set<T, P>::iterator::operator++()
+{
+    if (path.back().get()->right != nullptr) {
+        push(path.back().get()->right);
+        while (path.back().get()->left != nullptr) {
+            push(path.back().get()->left);
+        }
+    }
+    else {
+        node_ptr pr { path.back() };
+        path.pop_back();
+        while (!path.empty() && path.back().get()->right == pr) {
+            pr = path.back();
+            path.pop_back();
+        }
+    }
+
+    return *this;   // if path is empty, it will be equal to end()
+}
+
+template <typename T, template <typename> class P>
+typename persistent_set<T, P>::iterator& persistent_set<T, P>::iterator::operator--()
+{
+    if (path.back().get()->left != nullptr) {
+        push(path.back().get()->left);
+        while (path.back().get()->right != nullptr) {
+            push(path.back().get()->right);
+        }
+    }
+    else {
+        node_ptr pr { path.back() };
+        path.pop_back();
+        while (path.back().get()->left == pr) { // --begin() is undefined
+            pr = path.back();
+            path.pop_back();
+        }
+    }
+}
 
 #endif // PERSISTENT_SET_H
