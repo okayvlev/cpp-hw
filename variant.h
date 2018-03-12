@@ -92,8 +92,16 @@ public:
     constexpr variadic_union()
     { };
 
-    variadic_union(const variadic_union& other) = default;
+    variadic_union(const variadic_union& other) { }
     variadic_union(variadic_union&& other)      = default;
+    variadic_union& operator=(const variadic_union& other) // = default doesn't work (probably compiler bug?)
+    {
+        that = other.that;
+        others = other.others;
+
+        return *this;
+    };
+    variadic_union& operator=(variadic_union&& other) = default;
 
     template <typename... As>
     constexpr variadic_union(in_place_index_t<0>, As&&... args)
@@ -144,7 +152,7 @@ struct union_struct
     variadic_union<Ts...> data;
 
     constexpr union_struct() = default;
-    union_struct(const union_struct& other) = default;
+    union_struct(const union_struct& other)  = default;
     union_struct(union_struct&& other)      = default;
     union_struct& operator=(const union_struct& other) = default;
     union_struct& operator=(union_struct&& other) = default;
@@ -179,6 +187,12 @@ template <typename... Ts>
 struct destructible_union<true, Ts...>  : union_struct<Ts...>
 {
     size_t index;
+
+    constexpr destructible_union() = default;
+    destructible_union(const destructible_union& other) = default;
+    destructible_union(destructible_union&& other)      = default;
+    destructible_union& operator=(const destructible_union& other) = default;
+    destructible_union& operator=(destructible_union&& other) = default;
 
     template <size_t N, typename... As>
     constexpr destructible_union(in_place_index_t<N>, As&&... args)
@@ -221,6 +235,12 @@ template <typename... Ts>
 struct destructible_union<false, Ts...> : union_struct<Ts...>
 {
     size_t index;
+
+    constexpr destructible_union() = default;
+    destructible_union(const destructible_union& other) = default;
+    destructible_union(destructible_union&& other)      = default;
+    destructible_union& operator=(const destructible_union& other) = default;
+    destructible_union& operator=(destructible_union&& other) = default;
 
     template <size_t N, typename... As>
     constexpr destructible_union(in_place_index_t<N>, As&&... args)
@@ -297,7 +317,7 @@ struct simple_variant : DestructibleUnion<Ts...>
             return *this;
         }
         if (index() == rhs.index()) {
-            this->operator=(rhs);
+            DestructibleUnion<Ts...>::operator=(rhs);
             return *this;
         }
         if (visit([] (auto& arg) -> bool {
@@ -335,7 +355,7 @@ struct simple_variant : DestructibleUnion<Ts...>
             return *this;
         }
         if (index() == rhs.index()) {
-            this->operator=(std::move(rhs));
+            DestructibleUnion<Ts...>::operator=(std::move(rhs));
             return *this;
         }
 
@@ -390,12 +410,15 @@ struct variant
         >
     , simple_variant<T_0, Ts...>
 {
+private:
+    using default_constructor_t = enable_default_constructor<
+        std::is_default_constructible<T_0>::value,
+        noexcept(std::is_nothrow_default_constructible<T_0>::value)
+        >;
 
 public:
     /* -------------------[Constructors and Destructor]------------------- */
-    constexpr variant()
-        = default;
-
+    constexpr variant() = default;
     variant(const variant& other) = default;
     variant(variant&& other) noexcept(
         std::is_nothrow_move_constructible_v<T_0> &&
@@ -414,20 +437,22 @@ public:
             )
     { }
 
-    template <class T, class... As>
+    template <class T, class... As, typename = std::enable_if_t<std::is_constructible_v<T, As...>>>
     constexpr explicit variant(in_place_type_t<T>, As&&... args)
-        : simple_variant<T_0, Ts...> (
+        : default_constructor_t { 1 }
+        , simple_variant<T_0, Ts...> (
             in_place_index_t<get_index<T, T_0, Ts...>()>(),
             std::forward<As>(args)...
             )
     { }
 
-    template <std::size_t I, class... As>
+    template <size_t I, class... As>
     constexpr explicit variant(in_place_index_t<I>, As&&... args)
-        : simple_variant<T_0, Ts...> (
+        : default_constructor_t { 1 }
+        , simple_variant<T_0, Ts...> {
             in_place_index_t<I>(),
             std::forward<As>(args)...
-            )
+            }
     { }
 
     ~variant() = default;
@@ -487,14 +512,16 @@ public:
     {
         try {
             if (!valueless_by_exception()) {
-                destruct(index);
+                this->destruct(index());
             }
-            ~variant();
+            this->~variant();
             new(this) variant(in_place_index_t<I>(), std::forward<As>(args)...);
         }
         catch (...) {
             this->reset_index();
         }
+
+        return get<I>(*this);
     }
 
     void swap(variant& rhs) noexcept(

@@ -120,6 +120,7 @@ struct enable_default_constructor;
 template <bool NOEXCEPT>
 struct enable_default_constructor<true, NOEXCEPT>
 {
+    constexpr enable_default_constructor(bool) { }; // mirroring deleted constructor
     constexpr enable_default_constructor() noexcept(NOEXCEPT) = default;
     constexpr enable_default_constructor(const enable_default_constructor& other)          = default;
     constexpr enable_default_constructor(enable_default_constructor&& other)               = default;
@@ -130,6 +131,7 @@ struct enable_default_constructor<true, NOEXCEPT>
 template <bool NOEXCEPT>
 struct enable_default_constructor<false, NOEXCEPT>
 {
+    constexpr enable_default_constructor(bool) { }; // need something to call instead
     constexpr enable_default_constructor() noexcept(NOEXCEPT) = delete;
     constexpr enable_default_constructor(const enable_default_constructor& other)          = default;
     constexpr enable_default_constructor(enable_default_constructor&& other)               = default;
