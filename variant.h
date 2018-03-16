@@ -514,7 +514,6 @@ public:
             if (!valueless_by_exception()) {
                 this->destruct(index());
             }
-            this->~variant();
             new(this) variant(in_place_index_t<I>(), std::forward<As>(args)...);
         }
         catch (...) {
