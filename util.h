@@ -111,7 +111,7 @@ constexpr bool is_unique()
 template <typename T, typename... Ts>
 using best_match_once = std::enable_if_t<is_unique<T, Ts...>(), T>;
 
-template <typename T, typename... Ts>   // TODO decltype?
+template <typename T, typename... Ts>
 using best_match = best_match_once<std::result_of_t<overload<Ts...>(T)>, Ts...>;
 
 template <bool, bool NOEXCEPT>

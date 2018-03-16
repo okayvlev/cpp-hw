@@ -122,14 +122,35 @@ constexpr bool holds_alternative(const variant<Ts...>& v) noexcept
 
 template <size_t I, class... Ts>
 constexpr variant_alternative_t<I, variant<Ts...>>&
-get(variant<Ts...>& v)
+get(simple_variant<Ts...>& v)
+{
+    return v.get(in_place_index_t<I>());
+}
+
+template <size_t I, class... Ts>
+constexpr variant_alternative_t<I, variant<Ts...>>&&
+get(simple_variant<Ts...>&& v)
 {
     return v.get(in_place_index_t<I>());
 }
 
 template <size_t I, class... Ts>
 constexpr variant_alternative_t<I, variant<Ts...>>const &
-get(const simple_variant<Ts...>& v) // TODO
+get(const simple_variant<Ts...>& v)
+{
+    return v.get(in_place_index_t<I>());
+}
+
+template <size_t I, class... Ts>
+constexpr variant_alternative_t<I, variant<Ts...>>const &&
+get(const simple_variant<Ts...>&& v)
+{
+    return v.get(in_place_index_t<I>());
+}
+
+template <size_t I, class... Ts>
+constexpr variant_alternative_t<I, variant<Ts...>>&
+get(variant<Ts...>& v)
 {
     return v.get(in_place_index_t<I>());
 }
