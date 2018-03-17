@@ -144,16 +144,10 @@ public:
         return others.get(in_place_index_t<N - 1>());
     }
 
-    template <typename A>
-    void construct(in_place_index_t<0>, A&& t)
-    {
-        new(&that) container<std::decay_t<A>>(std::forward<A>(t));
-    }
-
     template <size_t N, typename A>
     void construct(in_place_index_t<N>, A&& t)
     {
-        others.construct(in_place_index_t<N - 1>(), std::forward<A>(t));
+        new(&get(in_place_index_t<N>())) container<std::decay_t<A>>(std::forward<A>(t));
     }
 
     void destruct(size_t index)
