@@ -67,7 +67,7 @@ public:
         return std::move(*reinterpret_cast<T*>(&data));
     }
 
-    constexpr const T&& get() const &&
+    const T&& get() const &&
     {
         return std::move(*reinterpret_cast<const T*>(&data));
     }
@@ -77,6 +77,10 @@ public:
 template <typename... Ts>
 union variadic_union
 {
+    variadic_union& operator=(const variadic_union& other) = default;
+    variadic_union& operator=(variadic_union&& other) = default;
+    template <size_t N, typename A>
+    void construct(in_place_index_t<N>, A&& t) { };
     void destruct(size_t)
     { }
 };
@@ -89,19 +93,24 @@ private:
     variadic_union<Ts...> others;
 
 public:
-    constexpr variadic_union()
-    { };
+    constexpr variadic_union() { };
+    variadic_union(const variadic_union&) = default;
+    variadic_union(variadic_union&&) = default;
 
-    variadic_union(const variadic_union& other) { }
-    variadic_union(variadic_union&& other)      = default;
     variadic_union& operator=(const variadic_union& other) // = default doesn't work (probably compiler bug?)
     {
-        that = other.that;
+        that   = other.that;
         others = other.others;
 
         return *this;
     };
-    variadic_union& operator=(variadic_union&& other) = default;
+    variadic_union& operator=(variadic_union&& other)
+    {
+        that   = std::move(other.that);
+        others = std::move(other.others);
+
+        return *this;
+    }
 
     template <typename... As>
     constexpr variadic_union(in_place_index_t<0>, As&&... args)
@@ -133,6 +142,18 @@ public:
     constexpr decltype(auto) get(in_place_index_t<N>) const
     {
         return others.get(in_place_index_t<N - 1>());
+    }
+
+    template <typename A>
+    void construct(in_place_index_t<0>, A&& t)
+    {
+        new(&that) container<std::decay_t<A>>(std::forward<A>(t));
+    }
+
+    template <size_t N, typename A>
+    void construct(in_place_index_t<N>, A&& t)
+    {
+        others.construct(in_place_index_t<N - 1>(), std::forward<A>(t));
     }
 
     void destruct(size_t index)
@@ -172,6 +193,12 @@ struct union_struct
     constexpr decltype(auto) get(in_place_index_t<N>) const
     {
         return data.get(in_place_index_t<N>());
+    }
+
+    template <size_t N, typename T>
+    void construct(in_place_index_t<N>, T&& t)
+    {
+        data.construct(in_place_index_t<N>(), std::forward<T>(t));
     }
 
     void destruct(size_t index)
@@ -218,6 +245,11 @@ struct destructible_union<true, Ts...>  : union_struct<Ts...>
         }
 
         return union_struct<Ts...>::get(in_place_index_t<N>());
+    }
+
+    void set_index(size_t index) noexcept
+    {
+        this->index = index;
     }
 
     constexpr size_t get_index() const
@@ -273,6 +305,11 @@ struct destructible_union<false, Ts...> : union_struct<Ts...>
         return union_struct<Ts...>::get(in_place_index_t<N>());
     }
 
+    void set_index(size_t index) noexcept
+    {
+        this->index = index;
+    }
+
     void reset_index() noexcept
     {
         index = variant_npos;
@@ -302,8 +339,24 @@ struct simple_variant : DestructibleUnion<Ts...>
         : DestructibleUnion<Ts...> { in_place_index_t<N>(), std::forward<As>(args)... }
     { }
 
-    simple_variant(const simple_variant& other) = default;
-    simple_variant(simple_variant&& other)      = default;
+    simple_variant(const simple_variant& other) noexcept
+    {
+        this->set_index(other.index());
+        visit([this](auto&& arg) {
+            constexpr size_t j = get_index<std::decay_t<decltype(arg)>, Ts...>();
+
+            this->construct(in_place_index_t<j>(), arg);
+        }, other);
+    }
+    simple_variant(simple_variant&& other) noexcept
+    {
+        this->set_index(other.index());
+        visit([this](auto&& arg) {
+            constexpr size_t j = get_index<std::decay_t<decltype(arg)>, Ts...>();
+
+            this->construct(in_place_index_t<j>(), std::move(arg));
+        }, other);
+    }
 
     ~simple_variant() = default;
 
@@ -325,6 +378,7 @@ struct simple_variant : DestructibleUnion<Ts...>
                        std::is_nothrow_move_constructible_v<decltype(arg)>);
             }, rhs)) {
                 simple_variant<Ts...> tmp { rhs };
+                this->destruct(index());
                 try {
                     new(this) simple_variant<Ts...> { std::move(tmp) };
                 }
@@ -360,6 +414,7 @@ struct simple_variant : DestructibleUnion<Ts...>
         }
 
         simple_variant<Ts...> tmp { std::move(rhs) };
+        this->destruct(index());
         try {
             new(this) simple_variant<Ts...> { std::move(tmp) };
         }

@@ -159,7 +159,7 @@ template <size_t I, class... Ts>
 constexpr variant_alternative_t<I, variant<Ts...>>&&
 get(variant<Ts...>&& v)
 {
-    return std::move(v).get(in_place_index_t<I>());
+    return std::move(v.get(in_place_index_t<I>()));
 }
 
 template <size_t I, class... Ts>
@@ -173,7 +173,7 @@ template <size_t I, class... Ts>
 constexpr variant_alternative_t<I, variant<Ts...>> const&&
 get(const variant<Ts...>&& v)
 {
-    return std::move(v).get(in_place_index_t<I>());
+    return std::move(v.get(in_place_index_t<I>()));
 }
 
 template <class T, class... Ts>
