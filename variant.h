@@ -78,7 +78,7 @@ template <typename... Ts>
 union variadic_union
 {
     variadic_union& operator=(const variadic_union& other) = default;
-    variadic_union& operator=(variadic_union&& other) = default;
+    variadic_union& operator=(variadic_union&& other)      = default;
     template <size_t N, typename A>
     void construct(in_place_index_t<N>, A&& t) { };
     void destruct(size_t)
@@ -95,9 +95,9 @@ private:
 public:
     constexpr variadic_union() { };
     variadic_union(const variadic_union&) = default;
-    variadic_union(variadic_union&&) = default;
+    variadic_union(variadic_union&&)      = default;
 
-    variadic_union& operator=(const variadic_union& other) // = default doesn't work (probably compiler bug?)
+    variadic_union& operator=(const variadic_union& other)
     {
         that   = other.that;
         others = other.others;
@@ -167,10 +167,10 @@ struct union_struct
     variadic_union<Ts...> data;
 
     constexpr union_struct() = default;
-    union_struct(const union_struct& other)  = default;
-    union_struct(union_struct&& other)      = default;
+    union_struct(const union_struct& other)            = default;
+    union_struct(union_struct&& other)                 = default;
     union_struct& operator=(const union_struct& other) = default;
-    union_struct& operator=(union_struct&& other) = default;
+    union_struct& operator=(union_struct&& other)      = default;
 
     template <size_t N, typename... As>
     constexpr union_struct(in_place_index_t<N>, As&&... args)
@@ -210,10 +210,10 @@ struct destructible_union<true, Ts...>  : union_struct<Ts...>
     size_t index;
 
     constexpr destructible_union() = default;
-    destructible_union(const destructible_union& other) = default;
-    destructible_union(destructible_union&& other)      = default;
+    destructible_union(const destructible_union& other)            = default;
+    destructible_union(destructible_union&& other)                 = default;
     destructible_union& operator=(const destructible_union& other) = default;
-    destructible_union& operator=(destructible_union&& other) = default;
+    destructible_union& operator=(destructible_union&& other)      = default;
 
     template <size_t N, typename... As>
     constexpr destructible_union(in_place_index_t<N>, As&&... args)
@@ -263,10 +263,10 @@ struct destructible_union<false, Ts...> : union_struct<Ts...>
     size_t index;
 
     constexpr destructible_union() = default;
-    destructible_union(const destructible_union& other) = default;
-    destructible_union(destructible_union&& other)      = default;
+    destructible_union(const destructible_union& other)            = default;
+    destructible_union(destructible_union&& other)                 = default;
     destructible_union& operator=(const destructible_union& other) = default;
-    destructible_union& operator=(destructible_union&& other) = default;
+    destructible_union& operator=(destructible_union&& other)      = default;
 
     template <size_t N, typename... As>
     constexpr destructible_union(in_place_index_t<N>, As&&... args)
