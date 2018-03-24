@@ -14,17 +14,17 @@ constexpr placeholder<3> _3;
 template <bool once, typename F, typename... As>
 struct bind_t;
 
-template <typename A, typename T_0, typename... Ts>
+template <typename A, typename... Ts>
 struct type_count
+{
+	static constexpr size_t value = 0;
+};
+
+template <typename A, typename T_0, typename... Ts>
+struct type_count<A, T_0, Ts...>
 {
 	static constexpr size_t value = (type_count<A, Ts...>::value)
 								  +  std::is_same<A, T_0>::value;
-};
-
-template <typename A, typename T>
-struct type_count<A, T>
-{
-	static constexpr size_t value = std::is_same<A, T>::value;
 };
 
 template <typename A, bool once, typename F, typename... As, typename... Ts>

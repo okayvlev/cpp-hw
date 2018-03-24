@@ -181,6 +181,8 @@ my_struct& rec(my_struct& a, my_struct& b) {
 	return a;
 }
 
+int func(int v, int w) { return v + w; }
+
 TEST(testBind, recBind) {
 	my_struct::logger = "";
 	my_struct x, y, z;
@@ -224,4 +226,9 @@ TEST(testCallOnceBind, moveFixedLvalueArgument) {
 	EXPECT_EQ(my_struct::logger, "c");
 	w();
 	EXPECT_EQ(my_struct::logger, "cm");
+}
+
+TEST(TEST1, bind_test) {
+
+	bind(func, _1, bind(func, _1, _2))(100, 200);
 }
