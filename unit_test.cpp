@@ -454,21 +454,21 @@ TEST(Construction, in_place_type_2) {
 //    std::cout << test7 << std::endl; // ans 01
 }
 
-// TEST(Construction, in_place_type_li) {
-//     std::string test8;
-//     variant<COMPLEX_TYPES_WITH_USER_DEFINED> www(in_place_type<stype>, {1, 1, 1});
-//     test8 += std::to_string(www.index());
-//     EXPECT_EQ(test8, "3");
-// //    std::cout << test8 << std::endl;   // ans = 3
-// }
-//
-// TEST(Construction, in_place_index_li) {
-//     std::string test9;
-//     variant<COMPLEX_TYPES_WITH_USER_DEFINED> wwww(in_place_index<3>, {1, 1, 1});
-//     test9 += std::to_string(wwww.index());
-//     EXPECT_EQ(test9, "3");
-// //    std::cout << test9 << std::endl;   // ans = 3
-// }
+TEST(Construction, in_place_type_li) {
+    std::string test8;
+    variant<COMPLEX_TYPES_WITH_USER_DEFINED> www(in_place_type<stype>, {1, 1, 1});
+    test8 += std::to_string(www.index());
+    EXPECT_EQ(test8, "3");
+//    std::cout << test8 << std::endl;   // ans = 3
+}
+
+TEST(Construction, in_place_index_li) {
+    std::string test9;
+    variant<COMPLEX_TYPES_WITH_USER_DEFINED> wwww(in_place_index<3>, {1, 1, 1});
+    test9 += std::to_string(wwww.index());
+    EXPECT_EQ(test9, "3");
+//    std::cout << test9 << std::endl;   // ans = 3
+}
 
 
 TEST(Assignment, copy) {

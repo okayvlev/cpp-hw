@@ -504,6 +504,28 @@ public:
             }
     { }
 
+    template <typename T, typename U, typename... As>
+    constexpr explicit variant(in_place_type_t<T>,
+                               std::initializer_list<U> il, As&&... args)
+       : default_constructor_t { 1 }
+       , simple_variant<T_0, Ts...> {
+           in_place_index_t<get_index<T, T_0, Ts...>()>(),
+           il,
+           std::forward<As>(args)...
+           }
+    { }
+
+    template <std::size_t I, typename U, typename... As>
+    constexpr explicit variant(in_place_index_t<I>,
+                               std::initializer_list<U> il, As&&... args)
+       : default_constructor_t { 1 }
+       , simple_variant<T_0, Ts...> {
+           in_place_index_t<I>(),
+           il,
+           std::forward<As>(args)...
+           }
+    { }
+
     ~variant() = default;
     /* -------------------[Constructors and Destructor]------------------- */
 
