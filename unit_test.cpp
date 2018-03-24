@@ -228,7 +228,7 @@ TEST(testCallOnceBind, moveFixedLvalueArgument) {
 	EXPECT_EQ(my_struct::logger, "cm");
 }
 
-TEST(TEST1, bind_test) {
-
-	bind(func, _1, bind(func, _1, _2))(100, 200);
+TEST(testBind, recBind4) {
+	int ans = bind(func, _1, bind(func, _1, _2))(100, 200);
+	EXPECT_EQ(ans, 400);
 }
