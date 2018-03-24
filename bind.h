@@ -1,3 +1,6 @@
+#ifndef BIND_H
+#define BIND_H
+
 #include <tuple>
 
 template <int N>
@@ -64,7 +67,7 @@ struct G
         return static_cast<typename ref_check<std::decay_t<A>, once>::type>(a);
     }
 
-    typename std::decay_t<A> a;
+    std::decay_t<A> a;
 };
 
 template <bool once>
@@ -143,14 +146,15 @@ private:
     std::tuple<G<once, As>...> gs;
 };
 
-template <typename F, typename... As>
-decltype(auto) bind(F&& f, As&&... as)
-{
-    return bind_t<false, F, As...>(std::forward<F>(f), std::forward<As>(as)...);
-}
+#define BIND_FUNC(name, bb) 													\
+template <typename F, typename... As>											\
+decltype(auto) name(F&& f, As&&... as)											\
+{																				\
+    return bind_t<bb, F, As...>(std::forward<F>(f), std::forward<As>(as)...);	\
+}																				\
 
-template <typename F, typename... As>
-decltype(auto) call_once_bind(F&& f, As&&... as)
-{
-    return bind_t<true , F, As...>(std::forward<F>(f), std::forward<As>(as)...);
-}
+BIND_FUNC(bind, false)
+BIND_FUNC(call_once_bind, true)
+#undef BIND_FUNC
+
+#endif	// BIND_H
