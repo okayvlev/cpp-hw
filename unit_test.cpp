@@ -662,3 +662,22 @@ TEST(Emplace, trivial) {
     EXPECT_EQ(test25, "0asd");
 //    std::cout << test25 << std::endl;
 }
+
+TEST(Hash, monostate) {
+	EXPECT_EQ(hash<monostate>{ }(monostate{ }), hash<monostate>{ }(monostate{ }));
+}
+
+TEST(Hash, variant) {
+	variant<int, float> a, b;
+	a = 4;
+	b = 4;
+	EXPECT_EQ(
+		(hash<variant<int, float>>{ }(a)),
+		(hash<variant<int, float>>{ }(b))
+	);
+	a = 4.f;
+	EXPECT_NE(
+		(hash<variant<int, float>>{ }(a)),
+		(hash<variant<int, float>>{ }(b))
+	);
+}

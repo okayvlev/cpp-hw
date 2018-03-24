@@ -3,10 +3,7 @@
 
 #include "variant.h"
 #include "util.h"
-
-
-struct monostate
-{ };
+#include <functional>
 
 struct in_place_t
 {
@@ -34,6 +31,9 @@ template <size_t I>
 constexpr in_place_index_t<I> in_place_index { };
 
 
+struct monostate
+{ };
+
 constexpr bool operator< (monostate, monostate) noexcept { return false; }
 constexpr bool operator> (monostate, monostate) noexcept { return false; }
 constexpr bool operator<=(monostate, monostate) noexcept { return true;  }
@@ -41,6 +41,42 @@ constexpr bool operator>=(monostate, monostate) noexcept { return true;  }
 constexpr bool operator==(monostate, monostate) noexcept { return true;  }
 constexpr bool operator!=(monostate, monostate) noexcept { return false; }
 
+template <typename T>
+struct hash { };
+
+template <>
+struct hash<monostate>
+{
+    using result_type   = size_t;
+    using argument_type = monostate;
+
+    size_t operator()(const monostate& t) const noexcept
+    {
+        return 42;
+    }
+};
+
+template <typename... Ts>
+struct hash<variant<Ts...>>
+{
+    using result_type   = size_t;
+    using argument_type = variant<Ts...>;
+
+    size_t operator()(const argument_type& t) const noexcept
+    {
+        if (t.valueless_by_exception())
+            return 0;
+
+        size_t value_hash = visit(
+            [](auto&& arg) -> size_t {
+                return std::hash<std::decay_t<decltype(arg)>>{ }(arg);
+            },
+            t
+            );
+
+        return value_hash;
+    }
+};
 
 struct bad_variant_access : public std::exception
 {
